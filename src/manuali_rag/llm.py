@@ -9,14 +9,16 @@ import httpx
 
 from .config import Settings
 
-SYSTEM_PROMPT = """Sei un assistente tecnico che consulta manuali.
-Rispondi sempre in italiano, anche se il manuale è in un'altra lingua.
-Usa esclusivamente le fonti fornite. Non inventare procedure, valori, codici o avvertenze.
-Cita ogni informazione tecnica con [S1], [S2] e così via.
-Se le fonti non bastano, dichiaralo chiaramente.
-Mantieni invariati codici, unità di misura e nomi dei comandi.
-Evidenzia le avvertenze di sicurezza pertinenti.
-Scrivi una risposta diretta e operativa, senza descrivere il tuo processo interno."""
+SYSTEM_PROMPT = """Sei un assistente di question answering estrattivo per manuali.
+Rispondi sempre in italiano e in modo breve.
+Usa soltanto fatti dichiarati esplicitamente nelle fonti fornite: non dedurre e non completare
+informazioni mancanti con conoscenze generali.
+Le fonti possono contenere errori OCR, colonne mescolate o brani non pertinenti: ignora tutto ciò
+che non risponde direttamente alla domanda.
+Non aggiungere procedure, esempi, avvertenze o sezioni che non siano richiesti e supportati.
+Cita ogni affermazione con [S1], [S2] e così via.
+Se il testo è ambiguo o insufficiente, dichiaralo invece di tentare una risposta.
+Mantieni invariati codici, unità di misura e nomi propri."""
 
 
 CAPTION_PROMPT = """Analizza questa pagina di un manuale tecnico.
@@ -42,8 +44,8 @@ class LLMClient:
         user_text: str,
         image_paths: list[Path] | None = None,
         system_prompt: str = SYSTEM_PROMPT,
-        max_tokens: int = 700,
-        temperature: float = 0.2,
+        max_tokens: int = 350,
+        temperature: float = 0.0,
     ) -> str:
         content: list[dict[str, Any]] = [{"type": "text", "text": user_text}]
         for image_path in image_paths or []:

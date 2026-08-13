@@ -2,7 +2,7 @@ from pathlib import Path
 
 from manuali_rag.config import Settings
 from manuali_rag.embeddings import HashEmbedder
-from manuali_rag.retrieval import Retriever
+from manuali_rag.retrieval import AnswerService, Retriever
 from manuali_rag.store import ChunkInput, Store
 
 
@@ -63,3 +63,44 @@ def test_hybrid_retrieval_finds_exact_error_code(tmp_path: Path) -> None:
     assert len(hits) == 1
     assert hits[0].page == 7
     assert "E104" in hits[0].content
+
+class RecordingLLM:
+    def __init__(self) -> None:
+        self.user_text = ""
+
+    def complete(self, *, user_text: str, image_paths: list[Path]) -> str:
+        self.user_text = user_text
+        return "La pressione è insufficiente [S1]."
+
+
+def test_answer_prompt_requires_supported_concise_answer(tmp_path: Path) -> None:
+    settings = settings_for(tmp_path)
+    store = Store(settings.database_path)
+    embedder = HashEmbedder(64)
+    chunk = ChunkInput(
+        page=7,
+        section="Codici errore",
+        content="L'errore E104 indica una pressione insufficiente nel circuito.",
+    )
+    store.replace_document(
+        document_id="doc1",
+        checksum="abc",
+        source_name="manuale.pdf",
+        title="Manuale caldaia",
+        markdown_path="documents/doc1/document.md",
+        page_count=20,
+        warnings=[],
+        chunks=[chunk],
+        embeddings=embedder.embed([chunk.content]),
+        embedding_model=embedder.model_name,
+    )
+    llm = RecordingLLM()
+
+    answer = AnswerService(Retriever(store, embedder, settings), llm, settings).answer(
+        "Cosa significa E104?", top_k=1
+    )
+
+    assert answer.text == "La pressione è insufficiente [S1]."
+    assert "ometti gli argomenti vicini ma non pertinenti" in llm.user_text
+    assert "al massimo cinque punti" in llm.user_text
+    assert "[S1] Manuale: Manuale caldaia; pagina 7" in llm.user_text

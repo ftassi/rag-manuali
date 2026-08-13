@@ -89,10 +89,15 @@ class AnswerService:
                     seen_images.add(hit.image_path)
 
         prompt = (
+            "COMPITO\n"
+            "Individua nelle fonti soltanto le frasi che rispondono direttamente alla domanda. "
+            "Formula una risposta concisa basata su quelle frasi e ometti gli argomenti vicini "
+            "ma non pertinenti. Non colmare parti confuse o mancanti.\n\n"
             f"DOMANDA\n{question}\n\n"
-            "FONTI RECUPERATE\n"
+            "FONTI\n"
             + "\n\n".join(source_blocks)
-            + "\n\nRispondi in italiano e cita le fonti con [S1], [S2], ecc."
+            + "\n\nRispondi in italiano con al massimo cinque punti o un breve paragrafo. "
+            "Inserisci le citazioni [S1], [S2], ecc. accanto alle affermazioni supportate."
         )
         text = self.llm.complete(user_text=prompt, image_paths=image_paths)
         return Answer(text=text, sources=hits)
