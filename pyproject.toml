@@ -1,0 +1,38 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "manuali-rag"
+version = "0.1.0"
+description = "RAG multimodale locale per manuali PDF e Markdown"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
+  "pydantic>=2.7,<3",
+  "pymupdf>=1.24,<2",
+  "python-multipart>=0.0.9,<1",
+  "uvicorn[standard]>=0.30,<1",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8,<9",
+  "ruff>=0.6,<1",
+]
+
+[project.scripts]
+manuali-rag = "manuali_rag.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/manuali_rag"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

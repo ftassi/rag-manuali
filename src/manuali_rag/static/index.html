@@ -1,0 +1,97 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manuali locali</title>
+  <style>
+    :root { color-scheme: light; font-family: Inter, system-ui, sans-serif; }
+    body { margin: 0; background: #f4f1ea; color: #1f2a27; }
+    main { max-width: 920px; margin: 0 auto; padding: 48px 20px; }
+    h1 { margin-bottom: 6px; font-size: clamp(2rem, 5vw, 3.4rem); }
+    .subtitle { color: #58645f; margin-top: 0; }
+    .card { background: #fff; border: 1px solid #d9ddd8; border-radius: 16px; padding: 20px;
+      margin: 20px 0; box-shadow: 0 8px 30px #24352c0d; }
+    textarea { width: 100%; min-height: 100px; resize: vertical; box-sizing: border-box;
+      border: 1px solid #bac3be; border-radius: 10px; padding: 12px; font: inherit; }
+    button, .file-label { border: 0; border-radius: 10px; background: #165f46; color: white;
+      padding: 11px 16px; font-weight: 650; cursor: pointer; display: inline-block; }
+    button:disabled { opacity: .55; cursor: wait; }
+    input[type=file] { max-width: 100%; margin: 0 10px 12px 0; }
+    .answer { white-space: pre-wrap; line-height: 1.6; }
+    .source { border-left: 3px solid #d38b33; padding: 8px 12px; margin: 12px 0; }
+    .source a { color: #165f46; font-weight: 650; }
+    .muted, #status { color: #68736e; font-size: .92rem; }
+    .error { color: #9b2c2c; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Manuali locali</h1>
+  <p class="subtitle">Domande in italiano, risposte basate sulle pagine dei tuoi manuali.</p>
+
+  <section class="card">
+    <h2>Importa un manuale</h2>
+    <input id="file" type="file" accept=".pdf,.md,.markdown">
+    <button id="upload">Importa e indicizza</button>
+    <p id="upload-status" class="muted"></p>
+  </section>
+
+  <section class="card">
+    <h2>Fai una domanda</h2>
+    <textarea id="question" placeholder="Ad esempio: come si pulisce il filtro e quali avvertenze devo seguire?"></textarea>
+    <p><button id="ask">Cerca nei manuali</button></p>
+    <p id="status"></p>
+    <div id="answer" class="answer"></div>
+    <div id="sources"></div>
+  </section>
+</main>
+<script>
+  const ask = document.querySelector('#ask');
+  const upload = document.querySelector('#upload');
+  const status = document.querySelector('#status');
+  const answer = document.querySelector('#answer');
+  const sources = document.querySelector('#sources');
+
+  upload.addEventListener('click', async () => {
+    const file = document.querySelector('#file').files[0];
+    if (!file) return;
+    upload.disabled = true;
+    document.querySelector('#upload-status').textContent = 'Importazione in corso: può richiedere alcuni minuti…';
+    const form = new FormData(); form.append('file', file);
+    try {
+      const response = await fetch('/api/documents', { method: 'POST', body: form });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Importazione fallita');
+      document.querySelector('#upload-status').textContent =
+        `${data.title}: ${data.pages} pagine, ${data.chunks} sezioni indicizzate.`;
+    } catch (error) {
+      document.querySelector('#upload-status').innerHTML = `<span class="error">${error.message}</span>`;
+    } finally { upload.disabled = false; }
+  });
+
+  ask.addEventListener('click', async () => {
+    const question = document.querySelector('#question').value.trim();
+    if (!question) return;
+    ask.disabled = true; answer.textContent = ''; sources.innerHTML = '';
+    status.textContent = 'Ricerca e generazione in corso…';
+    try {
+      const response = await fetch('/api/questions', {
+        method: 'POST', headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ question, top_k: 5, include_images: true })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.detail || 'Richiesta fallita');
+      status.textContent = '';
+      answer.textContent = data.answer;
+      sources.innerHTML = '<h3>Fonti</h3>' + data.sources.map((source, i) => `
+        <div class="source"><strong>[S${i + 1}] ${source.manual_title}</strong><br>
+        ${source.section}${source.page ? `, pagina ${source.page}` : ''}<br>
+        ${source.page_url ? `<a href="${source.page_url}" target="_blank">Apri la pagina</a>` : ''}</div>
+      `).join('');
+    } catch (error) { status.innerHTML = `<span class="error">${error.message}</span>`; }
+    finally { ask.disabled = false; }
+  });
+</script>
+</body>
+</html>
