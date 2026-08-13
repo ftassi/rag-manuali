@@ -32,6 +32,26 @@ sudo apt install tesseract-ocr tesseract-ocr-ita tesseract-ocr-eng
 
 ## Installazione dell'applicazione
 
+Percorso rapido con Make:
+
+```bash
+make init
+make check
+make start
+```
+
+Per importare e interrogare un manuale:
+
+```bash
+make ingest FILE=./manuali/caldera-x100.pdf
+make ask QUESTION="Come sostituisco il filtro?"
+```
+
+Usare `make help` per vedere tutti i target. Per avviare l'API senza un server embedding,
+solo per una prova del retrieval lessicale, usare `make start-dev`.
+
+In alternativa, l'installazione manuale è:
+
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install --upgrade pip
