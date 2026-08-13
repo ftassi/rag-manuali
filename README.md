@@ -85,6 +85,17 @@ Aprire `http://raspberrypi.local:8000`.
 
 ## Configurazione completa con llama.cpp
 
+Installare e compilare il runtime dal repository ufficiale:
+
+```bash
+make llama-install
+make llama-version
+```
+
+Il target installa i prerequisiti con `apt` e compila una build Release ottimizzata per la
+macchina corrente in `.local/llama.cpp`. Eseguirlo nuovamente aggiorna il clone con
+`git pull --ff-only` e ricompila.
+
 Sono previsti due processi locali:
 
 1. porta 8080: modello multimodale per risposte e immagini;
@@ -93,7 +104,7 @@ Sono previsti due processi locali:
 Esempio VLM, con nomi dei file da adattare ai GGUF scaricati:
 
 ```bash
-llama-server \
+.local/llama.cpp/build/bin/llama-server \
   -m models/Qwen3VL-2B-Instruct-Q4_K_M.gguf \
   --mmproj models/mmproj-Qwen3-VL-2B-Instruct-Q8_0.gguf \
   --ctx-size 8192 --threads 4 \
@@ -105,7 +116,7 @@ In alternativa si può provare Gemma 4 E2B-it Q4 con il relativo file `mmproj`.
 Esempio server embedding:
 
 ```bash
-llama-server \
+.local/llama.cpp/build/bin/llama-server \
   -m models/embeddinggemma-300m-Q8_0.gguf \
   --embedding --pooling mean --ctx-size 2048 --threads 4 \
   --host 127.0.0.1 --port 8081
