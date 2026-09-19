@@ -1,0 +1,71 @@
+{
+  "timestamp_utc": "2026-08-26T15:05:38.634754+00:00",
+  "host": {
+    "node": "PiMike",
+    "machine": "aarch64",
+    "python": "3.13.5"
+  },
+  "ollama": {
+    "base_url": "http://127.0.0.1:11434",
+    "model": "qwen2.5:1.5b"
+  },
+  "method": {
+    "warmup_runs": 1,
+    "measured_runs": 3,
+    "temperature": 0,
+    "seed": 42,
+    "num_predict": 96
+  },
+  "summary": {
+    "median_generated_tokens_per_second": 10.695,
+    "min_generated_tokens_per_second": 10.378,
+    "max_generated_tokens_per_second": 13.488,
+    "median_wall_seconds": 2.111,
+    "fact_checks_passed": 3,
+    "fact_checks_total": 3
+  },
+  "runs": [
+    {
+      "prompt": "Rispondi in italiano in una frase: il manuale dice che E104 indica pressione insufficiente. Cosa indica E104?",
+      "response": "E104 indica un problema di pressione insufficiente nel sistema, spesso dovuto a problemi con la pompa o l'acqua.",
+      "expected": [
+        "pressione insufficiente"
+      ],
+      "fact_check_passed": true,
+      "wall_seconds": 4.098,
+      "prompt_tokens": 62,
+      "prompt_tokens_per_second": 124.598,
+      "generated_tokens": 33,
+      "generated_tokens_per_second": 10.378,
+      "load_seconds": 0.416
+    },
+    {
+      "prompt": "Estrai solo il valore: 'Serrare il dado a 12 Nm'. Qual e la coppia di serraggio?",
+      "response": "La coppia di serraggio è \"12 Nm\".",
+      "expected": [
+        "12 nm"
+      ],
+      "fact_check_passed": true,
+      "wall_seconds": 2.111,
+      "prompt_tokens": 57,
+      "prompt_tokens_per_second": 119.911,
+      "generated_tokens": 13,
+      "generated_tokens_per_second": 10.695,
+      "load_seconds": 0.416
+    },
+    {
+      "prompt": "Usa solo la fonte. Fonte: pulire il filtro ogni sei mesi. Domanda: ogni quanto va pulito il filtro?",
+      "response": "Ogni sei mesi.",
+      "expected": [
+        "sei mesi"
+      ],
+      "fact_check_passed": true,
+      "wall_seconds": 1.446,
+      "prompt_tokens": 59,
+      "prompt_tokens_per_second": 114.637,
+      "generated_tokens": 7,
+      "generated_tokens_per_second": 13.488,
+      "load_seconds": 0.408
+    }
+  ]
+}

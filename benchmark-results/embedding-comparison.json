@@ -1,0 +1,254 @@
+{
+  "timestamp_utc": "2026-08-27T13:57:41.651781+00:00",
+  "method": {
+    "kind": "synthetic semantic retrieval",
+    "documents": 10,
+    "queries": 10,
+    "language": "it",
+    "manuals_real": false
+  },
+  "providers": [
+    {
+      "provider": "hash-dev",
+      "dimensions": 384,
+      "top1_correct": 4,
+      "top3_correct": 5,
+      "total": 10,
+      "mean_reciprocal_rank": 0.5272,
+      "total_embedding_seconds": 0.001,
+      "results": [
+        {
+          "query": "Come tolgo la corrente prima di accedere all'interno?",
+          "expected": "power",
+          "rank": 1,
+          "top3": [
+            "power",
+            "replacement",
+            "temperature"
+          ],
+          "top1_score": 0.1765
+        },
+        {
+          "query": "Qual è l'intervallo per detergere l'elemento filtrante?",
+          "expected": "filter",
+          "rank": 9,
+          "top3": [
+            "power",
+            "lubrication",
+            "pressure"
+          ],
+          "top1_score": 0.1588
+        },
+        {
+          "query": "Quale forza di rotazione va applicata al fissaggio?",
+          "expected": "torque",
+          "rank": 4,
+          "top3": [
+            "drain",
+            "power",
+            "pressure"
+          ],
+          "top1_score": 0.1432
+        },
+        {
+          "query": "Qual è il limite termico consentito durante l'uso?",
+          "expected": "temperature",
+          "rank": 9,
+          "top3": [
+            "power",
+            "replacement",
+            "storage"
+          ],
+          "top1_score": 0.2023
+        },
+        {
+          "query": "Che cosa significa E104 quando il circuito ha poca pressione?",
+          "expected": "pressure",
+          "rank": 1,
+          "top3": [
+            "pressure",
+            "torque",
+            "replacement"
+          ],
+          "top1_score": 0.2226
+        },
+        {
+          "query": "Quale anomalia segnala A7 nel condotto di uscita?",
+          "expected": "drain",
+          "rank": 1,
+          "top3": [
+            "drain",
+            "filter",
+            "temperature"
+          ],
+          "top1_score": 0.1432
+        },
+        {
+          "query": "Qual è il codice del pezzo sostitutivo ammesso?",
+          "expected": "replacement",
+          "rank": 2,
+          "top3": [
+            "drain",
+            "replacement",
+            "filter"
+          ],
+          "top1_score": 0.2691
+        },
+        {
+          "query": "Cosa fare quando la spia rossa pulsa?",
+          "expected": "battery",
+          "rank": 1,
+          "top3": [
+            "battery",
+            "torque",
+            "temperature"
+          ],
+          "top1_score": 0.1345
+        },
+        {
+          "query": "Con cosa vanno ingrassate annualmente le tenute?",
+          "expected": "lubrication",
+          "rank": 10,
+          "top3": [
+            "filter",
+            "torque",
+            "power"
+          ],
+          "top1_score": 0.0716
+        },
+        {
+          "query": "In quale ambiente va riposto l'apparecchio?",
+          "expected": "storage",
+          "rank": 5,
+          "top3": [
+            "pressure",
+            "power",
+            "battery"
+          ],
+          "top1_score": 0.2018
+        }
+      ]
+    },
+    {
+      "provider": "nomic-embed-text",
+      "dimensions": 768,
+      "top1_correct": 6,
+      "top3_correct": 8,
+      "total": 10,
+      "mean_reciprocal_rank": 0.7167,
+      "total_embedding_seconds": 0.838,
+      "results": [
+        {
+          "query": "Come tolgo la corrente prima di accedere all'interno?",
+          "expected": "power",
+          "rank": 1,
+          "top3": [
+            "power",
+            "storage",
+            "replacement"
+          ],
+          "top1_score": 0.6776
+        },
+        {
+          "query": "Qual è l'intervallo per detergere l'elemento filtrante?",
+          "expected": "filter",
+          "rank": 1,
+          "top3": [
+            "filter",
+            "pressure",
+            "storage"
+          ],
+          "top1_score": 0.6926
+        },
+        {
+          "query": "Quale forza di rotazione va applicata al fissaggio?",
+          "expected": "torque",
+          "rank": 6,
+          "top3": [
+            "lubrication",
+            "storage",
+            "filter"
+          ],
+          "top1_score": 0.7167
+        },
+        {
+          "query": "Qual è il limite termico consentito durante l'uso?",
+          "expected": "temperature",
+          "rank": 6,
+          "top3": [
+            "filter",
+            "torque",
+            "lubrication"
+          ],
+          "top1_score": 0.6117
+        },
+        {
+          "query": "Che cosa significa E104 quando il circuito ha poca pressione?",
+          "expected": "pressure",
+          "rank": 1,
+          "top3": [
+            "pressure",
+            "battery",
+            "replacement"
+          ],
+          "top1_score": 0.825
+        },
+        {
+          "query": "Quale anomalia segnala A7 nel condotto di uscita?",
+          "expected": "drain",
+          "rank": 1,
+          "top3": [
+            "drain",
+            "lubrication",
+            "filter"
+          ],
+          "top1_score": 0.7117
+        },
+        {
+          "query": "Qual è il codice del pezzo sostitutivo ammesso?",
+          "expected": "replacement",
+          "rank": 3,
+          "top3": [
+            "drain",
+            "storage",
+            "replacement"
+          ],
+          "top1_score": 0.6692
+        },
+        {
+          "query": "Cosa fare quando la spia rossa pulsa?",
+          "expected": "battery",
+          "rank": 2,
+          "top3": [
+            "filter",
+            "battery",
+            "lubrication"
+          ],
+          "top1_score": 0.6902
+        },
+        {
+          "query": "Con cosa vanno ingrassate annualmente le tenute?",
+          "expected": "lubrication",
+          "rank": 1,
+          "top3": [
+            "lubrication",
+            "filter",
+            "power"
+          ],
+          "top1_score": 0.6817
+        },
+        {
+          "query": "In quale ambiente va riposto l'apparecchio?",
+          "expected": "storage",
+          "rank": 1,
+          "top3": [
+            "storage",
+            "lubrication",
+            "filter"
+          ],
+          "top1_score": 0.6751
+        }
+      ]
+    }
+  ]
+}

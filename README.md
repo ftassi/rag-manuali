@@ -1,18 +1,18 @@
 # Manuali RAG
 
 Prototipo locale per importare manuali PDF o Markdown e porre domande in italiano. Le risposte
-sono prodotte da un modello vision-language eseguito con `llama.cpp` e includono i riferimenti
+sono prodotte da un modello locale eseguito con Ollama e includono i riferimenti
 al manuale e alla pagina.
 
 ## Cosa include
 
 - estrazione del testo e rendering delle pagine PDF con PyMuPDF;
 - OCR italiano/inglese opzionale tramite Tesseract;
-- descrizione indicizzabile di diagrammi e pagine visive tramite il VLM;
+- descrizione opzionale di diagrammi e pagine visive (richiede un modello Ollama vision);
 - importazione Markdown con commenti di pagina;
 - chunking per pagina e conservazione dei metadati;
 - indice ibrido SQLite FTS5 + embedding;
-- risposte multimodali con le pagine recuperate come input visivo;
+- risposte testuali con `llama3.2:3b` tramite l'API locale di Ollama;
 - API FastAPI, CLI e interfaccia web minimale;
 - funzionamento interamente locale, senza API cloud.
 
@@ -20,8 +20,8 @@ al manuale e alla pagina.
 
 - Python 3.11 o successivo;
 - Raspberry Pi OS 64 bit oppure una distribuzione Linux ARM64;
-- `llama.cpp` recente con supporto multimodale `libmtmd`;
-- circa 4–6 GB di RAM libera per VLM, embedding e applicazione;
+- Ollama con il modello `llama3.2:3b` già scaricato;
+- circa 3–4 GB di RAM libera per modello e applicazione;
 - raffreddamento attivo consigliato sul Raspberry Pi 5.
 
 Per PDF scansionati:
@@ -37,6 +37,7 @@ Percorso rapido con Make:
 ```bash
 make init
 make check
+make ollama-check
 make start
 ```
 
@@ -83,58 +84,111 @@ Quindi:
 
 Aprire `http://raspberrypi.local:8000`.
 
-## Configurazione completa con llama.cpp
+## Configurazione con Ollama
 
-Installare e compilare il runtime dal repository ufficiale:
-
-```bash
-make llama-install
-make llama-version
-```
-
-Il target installa i prerequisiti con `apt` e compila una build Release ottimizzata per la
-macchina corrente in `.local/llama.cpp`. Eseguirlo nuovamente aggiorna il clone con
-`git pull --ff-only` e ricompila.
-
-Sono previsti due processi locali:
-
-1. porta 8080: modello multimodale per risposte e immagini;
-2. porta 8081: piccolo modello di embedding per il retrieval.
-
-Esempio VLM, con nomi dei file da adattare ai GGUF scaricati:
+Ollama deve essere in esecuzione e il modello deve essere disponibile localmente. Il progetto non
+installa runtime o modelli:
 
 ```bash
-.local/llama.cpp/build/bin/llama-server \
-  -m models/Qwen3VL-2B-Instruct-Q4_K_M.gguf \
-  --mmproj models/mmproj-Qwen3-VL-2B-Instruct-Q8_0.gguf \
-  --ctx-size 8192 --threads 4 \
-  --host 127.0.0.1 --port 8080
+make ollama-check
+ollama list
 ```
 
-In alternativa si può provare Gemma 4 E2B-it Q4 con il relativo file `mmproj`.
+I modelli locali richiesti sono `llama3.2:3b` e `nomic-embed-text-v2-moe`. Se il secondo non è
+ancora presente, scaricarlo con `ollama pull nomic-embed-text-v2-moe` (circa 958 MB).
 
-Esempio server embedding:
-
-```bash
-.local/llama.cpp/build/bin/llama-server \
-  -m models/embeddinggemma-300m-Q8_0.gguf \
-  --embedding --pooling mean --ctx-size 2048 --threads 4 \
-  --host 127.0.0.1 --port 8081
-```
-
-Verificare il pooling raccomandato nella model card della specifica conversione GGUF. La
-configurazione applicativa predefinita è già predisposta per queste due porte:
+La configurazione predefinita usa l'endpoint OpenAI-compatibile di Ollama:
 
 ```dotenv
-MANUALI_LLM_BASE_URL=http://127.0.0.1:8080/v1
-MANUALI_LLM_MODEL=qwen3-vl-2b-instruct
+MANUALI_LLM_BASE_URL=http://127.0.0.1:11434/v1
+MANUALI_LLM_MODEL=llama3.2:3b
 MANUALI_EMBEDDING_PROVIDER=openai
-MANUALI_EMBEDDING_BASE_URL=http://127.0.0.1:8081/v1
-MANUALI_EMBEDDING_MODEL=embeddinggemma-300m
+MANUALI_EMBEDDING_BASE_URL=http://127.0.0.1:11434/v1
+MANUALI_EMBEDDING_MODEL=nomic-embed-text-v2-moe
+MANUALI_CAPTION_MODE=off
+MANUALI_MAX_IMAGES_PER_QUESTION=0
 ```
 
-Il termine `openai` indica soltanto il formato compatibile dell'API: le richieste restano sul
+`llama3.2:3b` è testuale, quindi caption e immagini sono disattivate.
+`nomic-embed-text-v2-moe` fornisce il retrieval semantico multilingue tramite Ollama;
+l'embedding hash resta disponibile soltanto per sviluppo. Tutte le richieste rimangono sul
 Raspberry Pi.
+
+## Benchmark sul Raspberry Pi
+
+Il benchmark esegue un warm-up e tre prompt italiani deterministici, poi salva tempi, token e
+token/s restituiti dall'API nativa di Ollama:
+
+```bash
+make benchmark
+```
+
+Il risultato predefinito è `benchmark-results/llama3.2-3b.json`. Per cambiare destinazione:
+
+```bash
+make benchmark BENCHMARK_OUTPUT=/tmp/llama3.2-3b.json
+```
+
+Per confrontare end-to-end i modelli su fonti tecniche sintetiche, senza manuali reali:
+
+```bash
+make rag-eval
+```
+
+La valutazione controlla retrieval, fatti attesi, dettagli vietati e citazioni, salvando il
+confronto in `benchmark-results/rag-model-comparison.json`.
+
+Per confrontare l'embedding hash con `nomic-embed-text-v2-moe` su query italiane parafrasate:
+
+```bash
+make embedding-eval
+```
+
+Il report viene salvato in `benchmark-results/embedding-comparison.json`.
+
+Per calibrare i pesi del retrieval ibrido FTS5 + embedding con Reciprocal Rank Fusion:
+
+```bash
+make hybrid-eval
+```
+
+Il report viene salvato in `benchmark-results/hybrid-retrieval-comparison.json`.
+
+I pesi predefiniti sono bilanciati (`semantic=1.0`, `lexical=1.0`, `rrf_k=60`) e possono essere
+modificati con `MANUALI_RETRIEVAL_SEMANTIC_WEIGHT`, `MANUALI_RETRIEVAL_LEXICAL_WEIGHT` e
+`MANUALI_RETRIEVAL_RRF_K`.
+
+Per limitare la contaminazione, la generazione usa normalmente la prima fonte e include la
+seconda solo quando la differenza di similarità è al massimo
+`MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02`.
+
+Per valutare insieme retrieval, risposta e citazioni senza limitare la ricerca a un documento:
+
+```bash
+make e2e-eval
+```
+
+Il report viene salvato in `benchmark-results/end-to-end-v2-llama3.2.json`.
+
+## Regressione sul Raspberry Pi
+
+Per eseguire test, lint e tutti i controlli live su Ollama con soglie automatiche:
+
+```bash
+make regression
+```
+
+I report vengono salvati in `benchmark-results/regression/`. Il comando termina con codice non
+zero se peggiorano accuratezza top-1/top-3, MRR, risposte end-to-end o latenza mediana. La suite
+include inoltre l'importazione completa di un Markdown sintetico temporaneo, la reimportazione
+idempotente, la ricerca, tre risposte live e lo smoke test del server HTTP reale; non utilizza né
+conserva manuali reali. Per ricontrollare i report senza rieseguire i modelli usare
+`make regression-check`. Il solo test del flusso di importazione si può lanciare con
+`make ingestion-eval`.
+
+Per verificare anche il server web reale, l'upload multipart e gli endpoint HTTP senza conservare
+dati di prova usare `make smoke-http`. Il comando avvia Uvicorn soltanto su `127.0.0.1`, sceglie
+una porta locale libera e rimuove il manuale sintetico e il database temporaneo al termine.
 
 ## Importazione
 
@@ -207,8 +261,7 @@ sudo systemctl daemon-reload
 sudo systemctl enable --now manuali-rag
 ```
 
-I due processi `llama-server` andrebbero configurati come servizi systemd separati e avviati
-prima dell'applicazione.
+Il servizio Ollama deve essere avviato prima dell'applicazione.
 
 ## Test
 

@@ -42,13 +42,17 @@ class Settings:
     chunk_chars: int
     chunk_overlap_chars: int
     retrieval_candidates: int
+    retrieval_semantic_weight: float
+    retrieval_lexical_weight: float
+    retrieval_rrf_k: int
+    answer_ambiguity_margin: float
     default_top_k: int
 
     @classmethod
     def from_env(cls) -> Settings:
         _load_env_file(Path(".env"))
         data_dir = Path(os.getenv("MANUALI_DATA_DIR", "./data")).expanduser().resolve()
-        caption_mode = os.getenv("MANUALI_CAPTION_MODE", "visual").strip().lower()
+        caption_mode = os.getenv("MANUALI_CAPTION_MODE", "off").strip().lower()
         if caption_mode not in {"off", "visual", "all"}:
             raise ValueError("MANUALI_CAPTION_MODE deve essere off, visual oppure all")
 
@@ -59,12 +63,12 @@ class Settings:
         return cls(
             data_dir=data_dir,
             database_path=data_dir / "manuali.sqlite3",
-            llm_base_url=os.getenv("MANUALI_LLM_BASE_URL", "http://127.0.0.1:8080/v1"),
-            llm_model=os.getenv("MANUALI_LLM_MODEL", "qwen3-vl-2b-instruct"),
+            llm_base_url=os.getenv("MANUALI_LLM_BASE_URL", "http://127.0.0.1:11434/v1"),
+            llm_model=os.getenv("MANUALI_LLM_MODEL", "llama3.2:3b"),
             llm_timeout=_float("MANUALI_LLM_TIMEOUT", 300),
             embedding_provider=provider,
-            embedding_base_url=os.getenv("MANUALI_EMBEDDING_BASE_URL", "http://127.0.0.1:8081/v1"),
-            embedding_model=os.getenv("MANUALI_EMBEDDING_MODEL", "embeddinggemma-300m"),
+            embedding_base_url=os.getenv("MANUALI_EMBEDDING_BASE_URL", "http://127.0.0.1:11434/v1"),
+            embedding_model=os.getenv("MANUALI_EMBEDDING_MODEL", "nomic-embed-text-v2-moe"),
             embedding_timeout=_float("MANUALI_EMBEDDING_TIMEOUT", 120),
             hash_embedding_dimensions=_int("MANUALI_HASH_EMBEDDING_DIMENSIONS", 384),
             render_dpi=_int("MANUALI_RENDER_DPI", 130),
@@ -72,10 +76,14 @@ class Settings:
             ocr_languages=os.getenv("MANUALI_OCR_LANGUAGES", "ita+eng"),
             ocr_min_chars=_int("MANUALI_OCR_MIN_CHARS", 80),
             caption_mode=caption_mode,
-            max_images_per_question=_int("MANUALI_MAX_IMAGES_PER_QUESTION", 2),
+            max_images_per_question=_int("MANUALI_MAX_IMAGES_PER_QUESTION", 0),
             chunk_chars=_int("MANUALI_CHUNK_CHARS", 2200),
             chunk_overlap_chars=_int("MANUALI_CHUNK_OVERLAP_CHARS", 250),
             retrieval_candidates=_int("MANUALI_RETRIEVAL_CANDIDATES", 30),
+            retrieval_semantic_weight=_float("MANUALI_RETRIEVAL_SEMANTIC_WEIGHT", 1.0),
+            retrieval_lexical_weight=_float("MANUALI_RETRIEVAL_LEXICAL_WEIGHT", 1.0),
+            retrieval_rrf_k=_int("MANUALI_RETRIEVAL_RRF_K", 60),
+            answer_ambiguity_margin=_float("MANUALI_ANSWER_AMBIGUITY_MARGIN", 0.02),
             default_top_k=_int("MANUALI_DEFAULT_TOP_K", 5),
         )
 

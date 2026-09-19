@@ -15,6 +15,20 @@ class Answer:
     sources: list[SearchHit]
 
 
+def _select_answer_sources(hits: list[SearchHit], ambiguity_margin: float) -> list[SearchHit]:
+    if len(hits) < 2:
+        return hits
+    first_score = hits[0].semantic_score
+    second_score = hits[1].semantic_score
+    if (
+        first_score is not None
+        and second_score is not None
+        and first_score - second_score <= ambiguity_margin
+    ):
+        return hits[:2]
+    return hits[:1]
+
+
 class Retriever:
     def __init__(self, store: Store, embedder: Embedder, settings: Settings) -> None:
         self.store = store
@@ -28,18 +42,24 @@ class Retriever:
         candidate_limit = max(self.settings.retrieval_candidates, top_k)
         lexical = self.store.lexical_candidates(question, candidate_limit, document_id)
         query_vector = self.embedder.embed([question])[0]
-        semantic = self.store.vector_candidates(
+        semantic_ranked = self.store.vector_candidates_with_scores(
             query_vector, candidate_limit, document_id=document_id
         )
+        semantic = [chunk_id for chunk_id, _ in semantic_ranked]
+        semantic_scores = dict(semantic_ranked)
 
         # Reciprocal Rank Fusion: robusto anche se i punteggi dei due motori hanno scale diverse.
         fused: dict[int, float] = {}
         for rank, chunk_id in enumerate(semantic, start=1):
-            fused[chunk_id] = fused.get(chunk_id, 0.0) + 1.0 / (60 + rank)
+            fused[chunk_id] = fused.get(chunk_id, 0.0) + (
+                self.settings.retrieval_semantic_weight / (self.settings.retrieval_rrf_k + rank)
+            )
         for rank, chunk_id in enumerate(lexical, start=1):
-            fused[chunk_id] = fused.get(chunk_id, 0.0) + 1.25 / (60 + rank)
+            fused[chunk_id] = fused.get(chunk_id, 0.0) + (
+                self.settings.retrieval_lexical_weight / (self.settings.retrieval_rrf_k + rank)
+            )
         ranked = sorted(fused.items(), key=lambda item: item[1], reverse=True)[:top_k]
-        return self.store.get_hits(ranked)
+        return self.store.get_hits(ranked, semantic_scores)
 
 
 class AnswerService:
@@ -68,6 +88,10 @@ class AnswerService:
                 sources=[],
             )
 
+        # Una sola fonte riduce la contaminazione. Manteniamo anche la seconda soltanto quando
+        # la similarità semantica è quasi equivalente e il ranking è quindi realmente ambiguo.
+        hits = _select_answer_sources(hits, self.settings.answer_ambiguity_margin)
+
         source_blocks: list[str] = []
         image_paths: list[Path] = []
         seen_images: set[str] = set()
@@ -90,14 +114,20 @@ class AnswerService:
 
         prompt = (
             "COMPITO\n"
-            "Individua nelle fonti soltanto le frasi che rispondono direttamente alla domanda. "
-            "Formula una risposta concisa basata su quelle frasi e ometti gli argomenti vicini "
-            "ma non pertinenti. Non colmare parti confuse o mancanti.\n\n"
+            "Copia dalle fonti solo i fatti indispensabili per rispondere direttamente alla "
+            "domanda e riformulali nel minimo numero di parole. Ometti gli argomenti vicini ma "
+            "non pertinenti. Non aggiungere spiegazioni, motivazioni, scopi, cause, conseguenze, "
+            "consigli o conoscenze generali, anche se plausibili. Non colmare parti confuse o "
+            "mancanti.\n\n"
             f"DOMANDA\n{question}\n\n"
-            "FONTI\n"
-            + "\n\n".join(source_blocks)
-            + "\n\nRispondi in italiano con al massimo cinque punti o un breve paragrafo. "
-            "Inserisci le citazioni [S1], [S2], ecc. accanto alle affermazioni supportate."
+            "FONTI\n" + "\n\n".join(source_blocks) + "\n\nVINCOLI DI USCITA\n"
+            "Rispondi in italiano con una sola frase breve, oppure con al massimo cinque punti "
+            "solo se la domanda richiede più elementi. Termina ogni frase o punto con almeno una "
+            "citazione nel formato esatto [S1], [S2], ecc. Non sostituire le citazioni con titoli "
+            "o numeri di pagina. Se le fonti non contengono la risposta, scrivi soltanto: "
+            "Copia codici e identificatori per intero, carattere per carattere, inclusi prefissi, "
+            "cifre e trattini. "
+            '"Le fonti fornite non contengono questa informazione."'
         )
-        text = self.llm.complete(user_text=prompt, image_paths=image_paths)
+        text = self.llm.complete(user_text=prompt, image_paths=image_paths, max_tokens=160)
         return Answer(text=text, sources=hits)

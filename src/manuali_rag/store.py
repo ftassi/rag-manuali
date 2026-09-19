@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 import sqlite3
 from dataclasses import asdict, dataclass
 from datetime import UTC, datetime
@@ -8,6 +9,61 @@ from pathlib import Path
 from typing import Any
 
 from .embeddings import blob_to_vector, vector_to_blob
+
+FTS_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
+FTS_STOPWORDS = {
+    "a",
+    "al",
+    "all",
+    "alla",
+    "alle",
+    "allo",
+    "che",
+    "chi",
+    "codice",
+    "come",
+    "con",
+    "cosa",
+    "da",
+    "dal",
+    "dalla",
+    "dalle",
+    "dallo",
+    "dei",
+    "del",
+    "dell",
+    "della",
+    "delle",
+    "dello",
+    "deve",
+    "di",
+    "e",
+    "fare",
+    "gli",
+    "ha",
+    "il",
+    "in",
+    "la",
+    "le",
+    "lo",
+    "nel",
+    "nella",
+    "nelle",
+    "nello",
+    "ogni",
+    "per",
+    "prima",
+    "qual",
+    "quale",
+    "quando",
+    "quanto",
+    "segnala",
+    "significa",
+    "un",
+    "una",
+    "va",
+    "vanno",
+}
 
 
 @dataclass(slots=True)
@@ -30,6 +86,7 @@ class SearchHit:
     image_path: str | None
     visual_summary: str | None
     score: float
+    semantic_score: float | None = None
 
     def to_dict(self) -> dict[str, Any]:
         return asdict(self)
@@ -206,8 +263,12 @@ class Store:
     def lexical_candidates(
         self, query: str, limit: int, document_id: str | None = None
     ) -> list[int]:
-        terms = [part.replace('"', "") for part in query.casefold().split() if part.strip()]
-        terms = [term for term in terms if any(character.isalnum() for character in term)]
+        terms = [
+            term
+            for term in FTS_TOKEN_RE.findall(query.casefold())
+            if term not in FTS_STOPWORDS
+            and (len(term) > 2 or any(character.isdigit() for character in term))
+        ]
         if not terms:
             return []
         expression = " OR ".join(f'"{term}"*' for term in terms[:20])
@@ -237,6 +298,19 @@ class Store:
         limit: int,
         document_id: str | None = None,
     ) -> list[int]:
+        return [
+            chunk_id
+            for chunk_id, _ in self.vector_candidates_with_scores(
+                query_vector, limit, document_id=document_id
+            )
+        ]
+
+    def vector_candidates_with_scores(
+        self,
+        query_vector: list[float],
+        limit: int,
+        document_id: str | None = None,
+    ) -> list[tuple[int, float]]:
         params: list[Any] = []
         where = ""
         if document_id:
@@ -261,9 +335,13 @@ class Store:
             score = sum(a * b for a, b in zip(query_vector, vector, strict=True))
             scored.append((score, int(row["chunk_id"])))
         scored.sort(reverse=True)
-        return [chunk_id for _, chunk_id in scored[:limit]]
+        return [(chunk_id, score) for score, chunk_id in scored[:limit]]
 
-    def get_hits(self, ranked: list[tuple[int, float]]) -> list[SearchHit]:
+    def get_hits(
+        self,
+        ranked: list[tuple[int, float]],
+        semantic_scores: dict[int, float] | None = None,
+    ) -> list[SearchHit]:
         if not ranked:
             return []
         ids = [chunk_id for chunk_id, _ in ranked]
@@ -290,6 +368,7 @@ class Store:
                 image_path=by_id[chunk_id]["image_path"],
                 visual_summary=by_id[chunk_id]["visual_summary"],
                 score=score,
+                semantic_score=(semantic_scores or {}).get(chunk_id),
             )
             for chunk_id, score in ranked
             if chunk_id in by_id

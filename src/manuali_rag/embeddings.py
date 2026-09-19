@@ -60,12 +60,18 @@ class HashEmbedder:
 
 
 class OpenAIEmbedder:
-    """Client per un llama-server locale avviato con --embedding."""
+    """Client per l'endpoint OpenAI-compatibile di embedding esposto da Ollama."""
 
-    def __init__(self, base_url: str, model: str, timeout: float) -> None:
+    def __init__(
+        self,
+        base_url: str,
+        model: str,
+        timeout: float,
+        client: httpx.Client | None = None,
+    ) -> None:
         self.base_url = base_url.rstrip("/")
         self.model_name = model
-        self.client = httpx.Client(timeout=timeout)
+        self.client = client or httpx.Client(timeout=timeout)
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:

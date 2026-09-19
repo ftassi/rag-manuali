@@ -1,0 +1,39 @@
+{
+  "timestamp_utc": "2026-09-19T09:49:50.381407+00:00",
+  "method": {
+    "kind": "real HTTP synthetic smoke test",
+    "manuals_real": false,
+    "host": "127.0.0.1"
+  },
+  "summary": {
+    "checks_passed": 6,
+    "total": 6,
+    "wall_seconds": 13.825
+  },
+  "checks": {
+    "health_before_empty": true,
+    "upload_ok": true,
+    "documents_ok": true,
+    "search_ok": true,
+    "answer_ok": true,
+    "health_after_ok": true
+  },
+  "answer": {
+    "answer": "Il codice R17 indica che la valvola di ritorno è bloccata [S1].",
+    "sources": [
+      {
+        "chunk_id": 2,
+        "document_id": "c64162ad3ff5c63f",
+        "manual_title": "Manuale Http Sintetico",
+        "page": 9,
+        "section": "Diagnostica",
+        "content": "## Diagnostica\nIl codice R17 indica che la valvola di ritorno è bloccata.",
+        "image_path": null,
+        "visual_summary": null,
+        "score": 0.03278688524590164,
+        "semantic_score": 0.5453757354773652,
+        "page_url": "/api/documents/c64162ad3ff5c63f/pages/9"
+      }
+    ]
+  }
+}

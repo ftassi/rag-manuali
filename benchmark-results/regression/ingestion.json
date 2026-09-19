@@ -1,0 +1,78 @@
+{
+  "timestamp_utc": "2026-09-19T09:54:56.064767+00:00",
+  "method": {
+    "kind": "synthetic Markdown ingestion end-to-end",
+    "manuals_real": false,
+    "embedding_model": "nomic-embed-text-v2-moe",
+    "llm_model": "llama3.2:3b",
+    "queries": 3
+  },
+  "ingestion": {
+    "document_id": "69caeed14b91f5d8",
+    "title": "Manuale Collaudo Sintetico",
+    "page_count": 3,
+    "chunk_count": 3,
+    "warnings": [],
+    "already_indexed": false,
+    "wall_seconds": 0.623,
+    "stored_markdown_exists": true,
+    "repeat_already_indexed": true
+  },
+  "summary": {
+    "retrieval_passed": 3,
+    "answers_passed": 3,
+    "total": 3
+  },
+  "results": [
+    {
+      "question": "In quale posizione va messo il selettore prima dell'avvio?",
+      "page": 2,
+      "terms": [
+        "zr-42"
+      ],
+      "retrieved_pages": [
+        2
+      ],
+      "answer": "Il selettore va messo sulla posizione ZR-42 prima dell'avvio [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "retrieval_ok": true,
+      "passed": true,
+      "wall_seconds": 12.721
+    },
+    {
+      "question": "Ogni quanto bisogna pulire il filtro e con cosa?",
+      "page": 7,
+      "terms": [
+        "180 ore",
+        "acqua tiepida"
+      ],
+      "retrieved_pages": [
+        7
+      ],
+      "answer": "Pulire il filtro ogni 180 ore usando esclusivamente acqua tiepida [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "retrieval_ok": true,
+      "passed": true,
+      "wall_seconds": 12.843
+    },
+    {
+      "question": "Che cosa significa il codice Q9?",
+      "page": 11,
+      "terms": [
+        "sensore di flusso",
+        "non risponde"
+      ],
+      "retrieved_pages": [
+        11
+      ],
+      "answer": "Il codice Q9 indica che il sensore di flusso non risponde [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "retrieval_ok": true,
+      "passed": true,
+      "wall_seconds": 11.828
+    }
+  ]
+}

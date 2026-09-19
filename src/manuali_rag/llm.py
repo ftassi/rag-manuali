@@ -16,7 +16,11 @@ informazioni mancanti con conoscenze generali.
 Le fonti possono contenere errori OCR, colonne mescolate o brani non pertinenti: ignora tutto ciò
 che non risponde direttamente alla domanda.
 Non aggiungere procedure, esempi, avvertenze o sezioni che non siano richiesti e supportati.
+Non aggiungere motivazioni, scopi, cause, conseguenze o consigli, neppure se sembrano plausibili:
+ogni parola informativa della risposta deve essere verificabile nelle fonti.
 Cita ogni affermazione con [S1], [S2] e così via.
+Usa esclusivamente identificatori di fonte nel formato esatto [S1], [S2] e così via; non sostituirli
+con titoli, numeri di pagina o formule come "secondo il manuale".
 Se il testo è ambiguo o insufficiente, dichiaralo invece di tentare una risposta.
 Mantieni invariati codici, unità di misura e nomi propri."""
 
@@ -33,10 +37,12 @@ class LLMError(RuntimeError):
 
 
 class LLMClient:
-    def __init__(self, settings: Settings) -> None:
+    """Client per l'API OpenAI-compatibile esposta localmente da Ollama."""
+
+    def __init__(self, settings: Settings, client: httpx.Client | None = None) -> None:
         self.base_url = settings.llm_base_url.rstrip("/")
         self.model = settings.llm_model
-        self.client = httpx.Client(timeout=settings.llm_timeout)
+        self.client = client or httpx.Client(timeout=settings.llm_timeout)
 
     def complete(
         self,

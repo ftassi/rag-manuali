@@ -1,0 +1,189 @@
+{
+  "timestamp_utc": "2026-09-19T09:05:54.959529+00:00",
+  "method": {
+    "kind": "unscoped end-to-end synthetic RAG",
+    "documents": 10,
+    "queries": 10,
+    "top_k": 3,
+    "embedding_model": "nomic-embed-text-v2-moe",
+    "llm_model": "llama3.2:3b",
+    "manuals_real": false
+  },
+  "summary": {
+    "retrieval_top1": 9,
+    "retrieval_top3": 10,
+    "answers_passed": 6,
+    "total": 10,
+    "median_wall_seconds": 13.8
+  },
+  "results": [
+    {
+      "question": "Come tolgo la corrente prima di accedere all'interno?",
+      "expected_document": "power",
+      "retrieved_documents": [
+        "power",
+        "battery",
+        "pressure"
+      ],
+      "retrieval_rank": 1,
+      "answer": "Per tolere la corrente prima di accedere all'interno, scollegare l'alimentazione elettrica [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [],
+      "passed": true,
+      "wall_seconds": 37.353
+    },
+    {
+      "question": "Qual è l'intervallo per detergere l'elemento filtrante?",
+      "expected_document": "filter",
+      "retrieved_documents": [
+        "filter",
+        "torque",
+        "pressure"
+      ],
+      "retrieval_rank": 1,
+      "answer": "L'intervallo per detergere l'elemento filtrante non è specificato nelle fonti fornite.",
+      "facts_ok": false,
+      "citation_ok": false,
+      "contamination": [],
+      "passed": false,
+      "wall_seconds": 14.218
+    },
+    {
+      "question": "Quale forza di rotazione va applicata al fissaggio?",
+      "expected_document": "torque",
+      "retrieved_documents": [
+        "lubrication",
+        "torque",
+        "drain"
+      ],
+      "retrieval_rank": 2,
+      "answer": "Applicare una forza di rotazione di 12 Nm al fissaggio [S2].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [],
+      "passed": true,
+      "wall_seconds": 13.285
+    },
+    {
+      "question": "Qual è il limite termico consentito durante l'uso?",
+      "expected_document": "temperature",
+      "retrieved_documents": [
+        "temperature",
+        "storage",
+        "pressure"
+      ],
+      "retrieval_rank": 1,
+      "answer": "Il limite termico consentito durante l'uso è 65 °C [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [],
+      "passed": true,
+      "wall_seconds": 13.255
+    },
+    {
+      "question": "Che cosa significa E104 quando il circuito ha poca pressione?",
+      "expected_document": "pressure",
+      "retrieved_documents": [
+        "pressure",
+        "drain",
+        "temperature"
+      ],
+      "retrieval_rank": 1,
+      "answer": "E104 indica una pressione insufficiente nel circuito [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [],
+      "passed": true,
+      "wall_seconds": 12.049
+    },
+    {
+      "question": "Quale anomalia segnala A7 nel condotto di uscita?",
+      "expected_document": "drain",
+      "retrieved_documents": [
+        "drain",
+        "pressure",
+        "replacement"
+      ],
+      "retrieval_rank": 1,
+      "answer": "Il codice A7 segnala lo scarico ostruito [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [],
+      "passed": true,
+      "wall_seconds": 12.719
+    },
+    {
+      "question": "Qual è il codice del pezzo sostitutivo ammesso?",
+      "expected_document": "replacement",
+      "retrieved_documents": [
+        "replacement",
+        "drain",
+        "battery"
+      ],
+      "retrieval_rank": 1,
+      "answer": "Il codice del pezzo sostitutivo ammesso è A7 [S2].",
+      "facts_ok": false,
+      "citation_ok": false,
+      "contamination": [
+        "a7"
+      ],
+      "passed": false,
+      "wall_seconds": 13.382
+    },
+    {
+      "question": "Cosa fare quando la spia rossa pulsa?",
+      "expected_document": "battery",
+      "retrieved_documents": [
+        "battery",
+        "power",
+        "drain"
+      ],
+      "retrieval_rank": 1,
+      "answer": "Per evitare danni al dispositivo, quando la spia rossa pulsa, è necessario scollegare l'alimentazione elettrica prima di aprire il pannello. \n\n* Scollegare l'alimentazione elettrica [S2].\n* Verificare se il problema è lo scarico ostruito (codice A7) [S3].",
+      "facts_ok": false,
+      "citation_ok": false,
+      "contamination": [
+        "alimentazione elettrica",
+        "a7"
+      ],
+      "passed": false,
+      "wall_seconds": 28.138
+    },
+    {
+      "question": "Con cosa vanno ingrassate annualmente le tenute?",
+      "expected_document": "lubrication",
+      "retrieved_documents": [
+        "lubrication",
+        "filter",
+        "power"
+      ],
+      "retrieval_rank": 1,
+      "answer": "Le tenute vanno ingrassate annualmente con applicare grasso al silicone sulle guarnizioni [S1].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [],
+      "passed": true,
+      "wall_seconds": 14.764
+    },
+    {
+      "question": "In quale ambiente va riposto l'apparecchio?",
+      "expected_document": "storage",
+      "retrieved_documents": [
+        "storage",
+        "battery",
+        "power"
+      ],
+      "retrieval_rank": 1,
+      "answer": "L'apparecchio va riposto in un luogo asciutto e ventilato [S1]. \n\nAlcuni altri punti da considerare:\n\n*   Sostituire la batteria quando l'indicatore lampeggia in rosso [S2].\n*   Scambiare il pannello quando necessario.\n*   Prima di aprire il pannello, scollegare l'alimentazione elettrica [S3].",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [
+        "alimentazione elettrica",
+        "lampeggia in rosso"
+      ],
+      "passed": false,
+      "wall_seconds": 30.286
+    }
+  ]
+}

@@ -1,0 +1,203 @@
+{
+  "timestamp_utc": "2026-08-27T13:48:45.286488+00:00",
+  "method": {
+    "kind": "end-to-end synthetic RAG",
+    "cases": 8,
+    "retrieval": "SQLite FTS5 + hash embeddings, document-scoped",
+    "manuals_real": false
+  },
+  "models": [
+    {
+      "model": "llama3.2:3b",
+      "passed": 8,
+      "total": 8,
+      "median_wall_seconds": 10.192,
+      "results": [
+        {
+          "id": "error-code",
+          "question": "Cosa indica l'errore E104?",
+          "answer": "L'errore E104 indica una pressione insufficiente nel circuito [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 31.103
+        },
+        {
+          "id": "torque",
+          "question": "Qual è la coppia di serraggio del dado della flangia?",
+          "answer": "La coppia di serraggio del dado della flangia è di 12 Nm [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 10.413
+        },
+        {
+          "id": "maintenance",
+          "question": "Ogni quanto va pulito il filtro dell'aria?",
+          "answer": "Pulire il filtro dell'aria ogni sei mesi [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 9.19
+        },
+        {
+          "id": "temperature",
+          "question": "Qual è la temperatura massima di esercizio?",
+          "answer": "La temperatura massima di esercizio è 65 °C [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 9.372
+        },
+        {
+          "id": "safety-order",
+          "question": "Cosa bisogna fare prima di rimuovere il coperchio?",
+          "answer": "Ecco la risposta:\n\nPrima di rimuovere il coperchio, scollegare l'alimentazione elettrica [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 13.895
+        },
+        {
+          "id": "pressure",
+          "question": "A quale pressione nominale va regolato il dispositivo?",
+          "answer": "La pressione nominale del dispositivo deve essere regolata a 2,5 bar [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 10.712
+        },
+        {
+          "id": "exact-name",
+          "question": "Qual è il nome esatto del kit di ricambio compatibile?",
+          "answer": "Il kit di ricambio compatibile è denominato KX-17B [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 9.9
+        },
+        {
+          "id": "irrelevant-neighbor",
+          "question": "Cosa segnala il codice A7?",
+          "answer": "Il codice A7 segnala lo scarico ostruito [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 9.972
+        }
+      ]
+    },
+    {
+      "model": "qwen2.5:1.5b",
+      "passed": 6,
+      "total": 8,
+      "median_wall_seconds": 5.045,
+      "results": [
+        {
+          "id": "error-code",
+          "question": "Cosa indica l'errore E104?",
+          "answer": "L'errore E104 indica una pressione insufficiente nel circuito. [S1]",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 15.411
+        },
+        {
+          "id": "torque",
+          "question": "Qual è la coppia di serraggio del dado della flangia?",
+          "answer": "[Manuale sintetico torque; pagina 2; sezione: Dati tecnici] Serrare il dado della flangia a 12 Nm.",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": false,
+          "passed": false,
+          "wall_seconds": 6.387
+        },
+        {
+          "id": "maintenance",
+          "question": "Ogni quanto va pulito il filtro dell'aria?",
+          "answer": "Pulire il filtro dell'aria ogni sei mesi [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 4.414
+        },
+        {
+          "id": "temperature",
+          "question": "Qual è la temperatura massima di esercizio?",
+          "answer": "La temperatura massima di esercizio è 65 °C [S1].",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 4.619
+        },
+        {
+          "id": "safety-order",
+          "question": "Cosa bisogna fare prima di rimuovere il coperchio?",
+          "answer": "Scollegare l'alimentazione elettrica [S1]",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 4.866
+        },
+        {
+          "id": "pressure",
+          "question": "A quale pressione nominale va regolato il dispositivo?",
+          "answer": "Regolare la pressione nominale a 2,5 bar. [S1]",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 4.785
+        },
+        {
+          "id": "exact-name",
+          "question": "Qual è il nome esatto del kit di ricambio compatibile?",
+          "answer": "Il nome esatto del kit di ricambio compatibile è KX-17B. [S1]",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 5.225
+        },
+        {
+          "id": "irrelevant-neighbor",
+          "question": "Cosa segnala il codice A7?",
+          "answer": "Il codice A7 segnala lo scarico ostruito dopo la manutenzione ordinaria. [S1]",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": false,
+          "citation_ok": true,
+          "passed": false,
+          "wall_seconds": 5.614
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "timestamp_utc": "2026-08-26T14:48:21.490115+00:00",
+  "host": {
+    "node": "PiMike",
+    "machine": "aarch64",
+    "python": "3.13.5"
+  },
+  "ollama": {
+    "base_url": "http://127.0.0.1:11434",
+    "model": "llama3.2:3b"
+  },
+  "method": {
+    "warmup_runs": 1,
+    "measured_runs": 3,
+    "temperature": 0,
+    "seed": 42,
+    "num_predict": 96
+  },
+  "summary": {
+    "median_generated_tokens_per_second": 6.066,
+    "min_generated_tokens_per_second": 5.055,
+    "max_generated_tokens_per_second": 6.274,
+    "median_wall_seconds": 4.169,
+    "fact_checks_passed": 2,
+    "fact_checks_total": 3
+  },
+  "runs": [
+    {
+      "prompt": "Rispondi in italiano in una frase: il manuale dice che E104 indica pressione insufficiente. Cosa indica E104?",
+      "response": "E104 indica un problema con la temperatura, non la pressione.",
+      "expected": [
+        "pressione insufficiente"
+      ],
+      "fact_check_passed": false,
+      "wall_seconds": 4.495,
+      "prompt_tokens": 54,
+      "prompt_tokens_per_second": 54.385,
+      "generated_tokens": 15,
+      "generated_tokens_per_second": 5.055,
+      "load_seconds": 0.531
+    },
+    {
+      "prompt": "Estrai solo il valore: 'Serrare il dado a 12 Nm'. Qual e la coppia di serraggio?",
+      "response": "La coppia di serraggio è di 12 Nm.",
+      "expected": [
+        "12 nm"
+      ],
+      "fact_check_passed": true,
+      "wall_seconds": 2.783,
+      "prompt_tokens": 52,
+      "prompt_tokens_per_second": 302.819,
+      "generated_tokens": 13,
+      "generated_tokens_per_second": 6.274,
+      "load_seconds": 0.532
+    },
+    {
+      "prompt": "Usa solo la fonte. Fonte: pulire il filtro ogni sei mesi. Domanda: ogni quanto va pulito il filtro?",
+      "response": "Ecco la risposta:\n\nFonte: \"Pulire il filtro ogni sei mesi.\"",
+      "expected": [
+        "sei mesi"
+      ],
+      "fact_check_passed": true,
+      "wall_seconds": 4.169,
+      "prompt_tokens": 55,
+      "prompt_tokens_per_second": 320.816,
+      "generated_tokens": 21,
+      "generated_tokens_per_second": 6.066,
+      "load_seconds": 0.528
+    }
+  ]
+}
