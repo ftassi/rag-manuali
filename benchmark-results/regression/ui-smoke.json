@@ -1,0 +1,24 @@
+{
+  "timestamp_utc": "2026-09-23T14:46:29.466703+00:00",
+  "method": {
+    "kind": "Firefox headless synthetic UI smoke test",
+    "manuals_real": false,
+    "browser": "Firefox"
+  },
+  "summary": {
+    "checks_passed": 7,
+    "total": 7,
+    "wall_seconds": 19.875
+  },
+  "checks": {
+    "page_loaded": true,
+    "upload_feedback": true,
+    "answer_rendered": true,
+    "source_rendered": true,
+    "no_broken_page_link": true,
+    "controls_reenabled": true,
+    "no_visible_error": true
+  },
+  "answer": "Il codice R17 indica che la valvola di ritorno è bloccata [S1].",
+  "sources": "Fonti\n[S1] Manuale Ui Sintetico\nDiagnostica, pagina 9"
+}

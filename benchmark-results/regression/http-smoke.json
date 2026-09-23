@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-09-19T09:55:09.880066+00:00",
+  "timestamp_utc": "2026-09-23T14:46:09.260692+00:00",
   "method": {
     "kind": "real HTTP synthetic smoke test",
     "manuals_real": false,
@@ -8,7 +8,7 @@
   "summary": {
     "checks_passed": 6,
     "total": 6,
-    "wall_seconds": 13.648
+    "wall_seconds": 14.056
   },
   "checks": {
     "health_before_empty": true,
@@ -32,7 +32,7 @@
         "visual_summary": null,
         "score": 0.03278688524590164,
         "semantic_score": 0.5453757354773652,
-        "page_url": "/api/documents/c64162ad3ff5c63f/pages/9"
+        "page_url": null
       }
     ]
   }

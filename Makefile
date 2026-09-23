@@ -18,9 +18,11 @@ HYBRID_EVAL_OUTPUT ?= benchmark-results/hybrid-retrieval-comparison.json
 E2E_EVAL_OUTPUT ?= benchmark-results/end-to-end-v2-llama3.2.json
 INGESTION_EVAL_OUTPUT ?= benchmark-results/ingestion-synthetic.json
 HTTP_SMOKE_OUTPUT ?= benchmark-results/http-smoke.json
+UI_SMOKE_OUTPUT ?= benchmark-results/ui-smoke.json
+UI_SMOKE_SCREENSHOT ?= benchmark-results/ui-smoke.png
 REGRESSION_DIR ?= benchmark-results/regression
 
-.PHONY: help init ollama-check benchmark rag-eval embedding-eval hybrid-eval e2e-eval ingestion-eval smoke-http regression regression-check start start-dev serve test lint check format ingest search ask documents health
+.PHONY: help init ollama-check benchmark rag-eval embedding-eval hybrid-eval e2e-eval ingestion-eval smoke-http smoke-ui regression regression-check start start-dev serve test lint check format ingest search ask documents health
 
 help: ## Mostra i comandi disponibili
 	@awk 'BEGIN {FS = ":.*## "; printf "Uso: make <target>\n\n"} /^[a-zA-Z_-]+:.*## / {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -73,6 +75,12 @@ smoke-http: ## Prova API HTTP, upload e domanda con dati sintetici temporanei
 	@mkdir -p "$(dir $(HTTP_SMOKE_OUTPUT))"
 	@"$(BIN)/python" scripts/smoke_http.py --output "$(HTTP_SMOKE_OUTPUT)"
 
+smoke-ui: ## Collauda l'interfaccia con Firefox e dati sintetici temporanei
+	@test -x "$(BIN)/python" || { echo "Ambiente non inizializzato: esegui make init"; exit 1; }
+	@command -v firefox >/dev/null || { echo "Firefox non installato"; exit 1; }
+	@mkdir -p "$(dir $(UI_SMOKE_OUTPUT))" "$(dir $(UI_SMOKE_SCREENSHOT))"
+	@"$(BIN)/python" scripts/smoke_ui.py --output "$(UI_SMOKE_OUTPUT)" --screenshot "$(UI_SMOKE_SCREENSHOT)"
+
 regression: check ollama-check ## Esegue la regressione completa sul Raspberry
 	@mkdir -p "$(REGRESSION_DIR)"
 	@"$(BIN)/python" scripts/evaluate_embeddings.py --output "$(REGRESSION_DIR)/embedding.json" >/dev/null
@@ -80,6 +88,7 @@ regression: check ollama-check ## Esegue la regressione completa sul Raspberry
 	@"$(BIN)/python" scripts/evaluate_end_to_end.py --output "$(REGRESSION_DIR)/end-to-end.json" >/dev/null
 	@"$(BIN)/python" scripts/evaluate_ingestion.py --output "$(REGRESSION_DIR)/ingestion.json" >/dev/null
 	@"$(BIN)/python" scripts/smoke_http.py --output "$(REGRESSION_DIR)/http-smoke.json" >/dev/null
+	@"$(BIN)/python" scripts/smoke_ui.py --output "$(REGRESSION_DIR)/ui-smoke.json" --screenshot "$(REGRESSION_DIR)/ui-smoke.png" >/dev/null
 	@"$(BIN)/python" scripts/check_regression.py "$(REGRESSION_DIR)"
 
 regression-check: ## Verifica le soglie sugli ultimi report di regressione

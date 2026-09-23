@@ -103,7 +103,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             )
         except Exception as exc:
             raise HTTPException(502, f"Ricerca non disponibile: {exc}") from exc
-        return {"results": [_source_payload(hit) for hit in hits]}
+        return {"results": [_source_payload(hit, settings) for hit in hits]}
 
     @app.post("/api/questions")
     def question(request: QuestionRequest) -> dict[str, object]:
@@ -120,7 +120,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
             raise HTTPException(502, f"Generazione non disponibile: {exc}") from exc
         return {
             "answer": answer.text,
-            "sources": [_source_payload(hit) for hit in answer.sources],
+            "sources": [_source_payload(hit, settings) for hit in answer.sources],
         }
 
     @app.get("/api/documents/{document_id}/pages/{page}")
@@ -138,10 +138,20 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     return app
 
 
-def _source_payload(hit: object) -> dict[str, object]:
+def _source_payload(hit: object, settings: Settings) -> dict[str, object]:
     # SearchHit è mantenuto fuori dai modelli HTTP per non accoppiare storage e API.
     payload = hit.to_dict()  # type: ignore[attr-defined]
-    if payload["page"]:
+    page = payload["page"]
+    page_image = (
+        settings.data_dir
+        / "documents"
+        / str(payload["document_id"])
+        / "pages"
+        / f"page-{int(page):04d}.jpg"
+        if page
+        else None
+    )
+    if page_image and page_image.is_file():
         payload["page_url"] = f"/api/documents/{payload['document_id']}/pages/{payload['page']}"
     else:
         payload["page_url"] = None

@@ -69,8 +69,11 @@ def test_build_checks_reads_all_reports(tmp_path) -> None:
     (tmp_path / "http-smoke.json").write_text(
         json.dumps({"summary": {"checks_passed": 6, "total": 6}})
     )
+    (tmp_path / "ui-smoke.json").write_text(
+        json.dumps({"summary": {"checks_passed": 7, "total": 7}})
+    )
 
     checks = build_checks(tmp_path)
 
-    assert len(checks) == 18
+    assert len(checks) == 20
     assert all(check.passed for check in checks)

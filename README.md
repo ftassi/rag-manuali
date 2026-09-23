@@ -181,14 +181,19 @@ make regression
 I report vengono salvati in `benchmark-results/regression/`. Il comando termina con codice non
 zero se peggiorano accuratezza top-1/top-3, MRR, risposte end-to-end o latenza mediana. La suite
 include inoltre l'importazione completa di un Markdown sintetico temporaneo, la reimportazione
-idempotente, la ricerca, tre risposte live e lo smoke test del server HTTP reale; non utilizza né
-conserva manuali reali. Per ricontrollare i report senza rieseguire i modelli usare
-`make regression-check`. Il solo test del flusso di importazione si può lanciare con
-`make ingestion-eval`.
+idempotente, la ricerca, tre risposte live, lo smoke test HTTP e il collaudo dell'interfaccia con
+Firefox headless; non utilizza né conserva manuali reali. Per ricontrollare i report senza
+rieseguire i modelli usare `make regression-check`. Il solo test del flusso di importazione si può
+lanciare con `make ingestion-eval`.
 
 Per verificare anche il server web reale, l'upload multipart e gli endpoint HTTP senza conservare
 dati di prova usare `make smoke-http`. Il comando avvia Uvicorn soltanto su `127.0.0.1`, sceglie
 una porta locale libera e rimuove il manuale sintetico e il database temporaneo al termine.
+
+Per collaudare anche i controlli dell'interfaccia in un browser reale usare `make smoke-ui`.
+Il test guida Firefox in modalità headless attraverso upload e domanda, verifica risposta e fonti
+e salva report e screenshot in `benchmark-results/ui-smoke.*`. Richiede Firefox e le dipendenze
+di sviluppo installate da `make init`; anche in questo caso i dati sintetici sono temporanei.
 
 ## Importazione
 

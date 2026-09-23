@@ -49,6 +49,7 @@ def build_checks(report_dir: Path) -> list[Check]:
     ingestion = ingestion_report["ingestion"]
     ingestion_summary = ingestion_report["summary"]
     http_smoke = _load(report_dir / "http-smoke.json")["summary"]
+    ui_smoke = _load(report_dir / "ui-smoke.json")["summary"]
     return [
         Check("embedding top-1", embedding["top1_correct"], minimum=9),
         Check("embedding top-3", embedding["top3_correct"], minimum=10),
@@ -80,4 +81,6 @@ def build_checks(report_dir: Path) -> list[Check]:
         Check("ingestion risposte", ingestion_summary["answers_passed"], minimum=3),
         Check("HTTP smoke controlli previsti", http_smoke["total"], minimum=6),
         Check("HTTP smoke controlli superati", http_smoke["checks_passed"], minimum=6),
+        Check("UI smoke controlli previsti", ui_smoke["total"], minimum=7),
+        Check("UI smoke controlli superati", ui_smoke["checks_passed"], minimum=7),
     ]
