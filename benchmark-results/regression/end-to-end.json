@@ -1,20 +1,20 @@
 {
-  "timestamp_utc": "2026-09-23T14:45:16.481963+00:00",
+  "timestamp_utc": "2026-10-02T17:24:38.910782+00:00",
   "method": {
     "kind": "unscoped end-to-end synthetic RAG",
-    "documents": 10,
-    "queries": 10,
+    "documents": 11,
+    "queries": 11,
     "top_k": 3,
     "embedding_model": "nomic-embed-text-v2-moe",
     "llm_model": "llama3.2:3b",
     "manuals_real": false
   },
   "summary": {
-    "retrieval_top1": 9,
-    "retrieval_top3": 10,
-    "answers_passed": 10,
-    "total": 10,
-    "median_wall_seconds": 12.174
+    "retrieval_top1": 10,
+    "retrieval_top3": 11,
+    "answers_passed": 11,
+    "total": 11,
+    "median_wall_seconds": 13.211
   },
   "results": [
     {
@@ -24,12 +24,12 @@
         "power"
       ],
       "retrieval_rank": 1,
-      "answer": "Ecco la risposta:\n\nPer tolere la corrente prima di accedere all'interno, scollegare l'alimentazione elettrica [S1].",
+      "answer": "Esegui il seguente passaggio prima di accedere all'interno: scollegare l'alimentazione elettrica [S1].",
       "facts_ok": true,
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 16.031
+      "wall_seconds": 15.133
     },
     {
       "question": "Qual è l'intervallo per detergere l'elemento filtrante?",
@@ -43,7 +43,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 12.233
+      "wall_seconds": 13.023
     },
     {
       "question": "Quale forza di rotazione va applicata al fissaggio?",
@@ -58,7 +58,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 13.498
+      "wall_seconds": 13.944
     },
     {
       "question": "Qual è il limite termico consentito durante l'uso?",
@@ -72,7 +72,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 11.306
+      "wall_seconds": 11.516
     },
     {
       "question": "Che cosa significa E104 quando il circuito ha poca pressione?",
@@ -86,7 +86,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 10.819
+      "wall_seconds": 11.411
     },
     {
       "question": "Quale anomalia segnala A7 nel condotto di uscita?",
@@ -100,7 +100,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 11.395
+      "wall_seconds": 11.654
     },
     {
       "question": "Qual è il codice del pezzo sostitutivo ammesso?",
@@ -114,7 +114,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 12.142
+      "wall_seconds": 22.198
     },
     {
       "question": "Cosa fare quando la spia rossa pulsa?",
@@ -123,12 +123,12 @@
         "battery"
       ],
       "retrieval_rank": 1,
-      "answer": "Sostituire la batteria quando l'indicatore lampeggia in rosso [S1].",
+      "answer": "La spia rossa pulsa per indicare che la batteria è scarica e deve essere sostituita [S1].",
       "facts_ok": true,
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 12.358
+      "wall_seconds": 14.376
     },
     {
       "question": "Con cosa vanno ingrassate annualmente le tenute?",
@@ -142,7 +142,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 12.205
+      "wall_seconds": 13.144
     },
     {
       "question": "In quale ambiente va riposto l'apparecchio?",
@@ -156,7 +156,21 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 11.98
+      "wall_seconds": 13.211
+    },
+    {
+      "question": "In quale stato deve essere un'agenda per poterla modificare?",
+      "expected_document": "inactive-state",
+      "retrieved_documents": [
+        "inactive-state"
+      ],
+      "retrieval_rank": 1,
+      "answer": "In stato Inattivo può essere modificata un'agenda.\n\n[S1] Manuale: Manuale sintetico inactive-state; pagina 11; sezione: Dati tecnici",
+      "facts_ok": true,
+      "citation_ok": true,
+      "contamination": [],
+      "passed": true,
+      "wall_seconds": 17.15
     }
   ]
 }

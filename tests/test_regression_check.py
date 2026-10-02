@@ -17,9 +17,9 @@ def test_build_checks_reads_all_reports(tmp_path) -> None:
                 "providers": [
                     {
                         "provider": "nomic-embed-text-v2-moe",
-                        "top1_correct": 9,
-                        "top3_correct": 10,
-                        "mean_reciprocal_rank": 0.95,
+                        "top1_correct": 10,
+                        "top3_correct": 11,
+                        "mean_reciprocal_rank": 0.9545,
                     }
                 ]
             }
@@ -32,9 +32,9 @@ def test_build_checks_reads_all_reports(tmp_path) -> None:
                     {
                         "provider": "nomic-embed-text-v2-moe",
                         "best": {
-                            "top1_correct": 9,
-                            "top3_correct": 10,
-                            "mean_reciprocal_rank": 0.95,
+                            "top1_correct": 10,
+                            "top3_correct": 11,
+                            "mean_reciprocal_rank": 0.9545,
                         },
                     }
                 ]
@@ -45,11 +45,13 @@ def test_build_checks_reads_all_reports(tmp_path) -> None:
         json.dumps(
             {
                 "summary": {
-                    "retrieval_top1": 9,
-                    "retrieval_top3": 10,
-                    "answers_passed": 10,
+                    "retrieval_top1": 10,
+                    "retrieval_top3": 11,
+                    "answers_passed": 11,
+                    "total": 11,
                     "median_wall_seconds": 12,
-                }
+                },
+                "results": [{"expected_document": "inactive-state", "passed": True}],
             }
         )
     )
@@ -75,5 +77,5 @@ def test_build_checks_reads_all_reports(tmp_path) -> None:
 
     checks = build_checks(tmp_path)
 
-    assert len(checks) == 20
+    assert len(checks) == 22
     assert all(check.passed for check in checks)

@@ -1,9 +1,9 @@
 {
-  "timestamp_utc": "2026-09-23T14:43:08.891726+00:00",
+  "timestamp_utc": "2026-10-02T17:21:58.289664+00:00",
   "method": {
     "kind": "synthetic semantic retrieval",
-    "documents": 10,
-    "queries": 10,
+    "documents": 11,
+    "queries": 11,
     "language": "it",
     "manuals_real": false
   },
@@ -11,11 +11,11 @@
     {
       "provider": "hash-dev",
       "dimensions": 384,
-      "top1_correct": 4,
-      "top3_correct": 5,
-      "total": 10,
-      "mean_reciprocal_rank": 0.5272,
-      "total_embedding_seconds": 0.001,
+      "top1_correct": 5,
+      "top3_correct": 6,
+      "total": 11,
+      "mean_reciprocal_rank": 0.5653,
+      "total_embedding_seconds": 0.002,
       "results": [
         {
           "query": "Come tolgo la corrente prima di accedere all'interno?",
@@ -31,7 +31,7 @@
         {
           "query": "Qual è l'intervallo per detergere l'elemento filtrante?",
           "expected": "filter",
-          "rank": 9,
+          "rank": 10,
           "top3": [
             "power",
             "lubrication",
@@ -108,7 +108,7 @@
         {
           "query": "Con cosa vanno ingrassate annualmente le tenute?",
           "expected": "lubrication",
-          "rank": 10,
+          "rank": 11,
           "top3": [
             "filter",
             "torque",
@@ -119,24 +119,35 @@
         {
           "query": "In quale ambiente va riposto l'apparecchio?",
           "expected": "storage",
-          "rank": 5,
+          "rank": 6,
           "top3": [
             "pressure",
             "power",
             "battery"
           ],
           "top1_score": 0.2018
+        },
+        {
+          "query": "In quale stato deve essere un'agenda per poterla modificare?",
+          "expected": "inactive-state",
+          "rank": 1,
+          "top3": [
+            "inactive-state",
+            "storage",
+            "filter"
+          ],
+          "top1_score": 0.3848
         }
       ]
     },
     {
       "provider": "nomic-embed-text-v2-moe",
       "dimensions": 768,
-      "top1_correct": 9,
-      "top3_correct": 10,
-      "total": 10,
-      "mean_reciprocal_rank": 0.95,
-      "total_embedding_seconds": 2.135,
+      "top1_correct": 10,
+      "top3_correct": 11,
+      "total": 11,
+      "mean_reciprocal_rank": 0.9545,
+      "total_embedding_seconds": 2.216,
       "results": [
         {
           "query": "Come tolgo la corrente prima di accedere all'interno?",
@@ -247,6 +258,17 @@
             "power"
           ],
           "top1_score": 0.417
+        },
+        {
+          "query": "In quale stato deve essere un'agenda per poterla modificare?",
+          "expected": "inactive-state",
+          "rank": 1,
+          "top3": [
+            "inactive-state",
+            "battery",
+            "power"
+          ],
+          "top1_score": 0.7479
         }
       ]
     }

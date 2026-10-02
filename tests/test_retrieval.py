@@ -2,7 +2,13 @@ from pathlib import Path
 
 from manuali_rag.config import Settings
 from manuali_rag.embeddings import HashEmbedder
-from manuali_rag.retrieval import AnswerService, Retriever, _select_answer_sources
+from manuali_rag.retrieval import (
+    AnswerService,
+    Retriever,
+    _relevant_excerpt,
+    _required_identifier,
+    _select_answer_sources,
+)
 from manuali_rag.store import ChunkInput, SearchHit, Store
 
 
@@ -120,6 +126,43 @@ def test_answer_sources_keep_two_when_semantically_ambiguous() -> None:
     assert _select_answer_sources(hits, 0.02) == hits[:2]
 
 
+def test_relevant_excerpt_preserves_negation_and_opposite_state() -> None:
+    content = """Associazione dell'agenda
+
+Selezionare il reparto richiedente.
+
+Attivare l'agenda dal menu principale.
+
+Per apportare modifiche a un'agenda già attivata, procedere come segue.
+
+Riportare temporaneamente l'agenda in stato Inattivo.
+
+Effettuare le modifiche necessarie.
+
+Un'agenda in stato Attivo non può essere modificata."""
+
+    excerpt = _relevant_excerpt(
+        content, "In quale stato deve essere un'agenda per poterla modificare?"
+    )
+
+    assert "stato Inattivo" in excerpt
+    assert "stato Attivo non può essere modificata" in excerpt
+    assert "Selezionare il reparto" not in excerpt
+
+
+def test_required_identifier_detects_truncated_code() -> None:
+    hit = _hit(1, 0.5)
+    hit.content = "Il kit compatibile è KX-17B."
+
+    assert _required_identifier("Qual è il codice del kit?", [hit], "Il codice è 17B [S1].") == (
+        "KX-17B"
+    )
+    assert (
+        _required_identifier("Qual è il codice del kit?", [hit], "Il codice è KX-17B [S1].") is None
+    )
+    assert _required_identifier("Quale kit è compatibile?", [hit], "Il kit è 17B [S1].") is None
+
+
 class RecordingLLM:
     def __init__(self) -> None:
         self.user_text = ""
@@ -160,6 +203,8 @@ def test_answer_prompt_requires_supported_concise_answer(tmp_path: Path) -> None
     assert answer.text == "La pressione è insufficiente [S1]."
     assert "Ometti gli argomenti vicini ma non pertinenti" in llm.user_text
     assert "Non aggiungere spiegazioni, motivazioni" in llm.user_text
+    assert "uno stato per cui la fonte dice 'non può' deve essere escluso" in llm.user_text
+    assert "non trasformare 'non può' in 'può'" in llm.user_text
     assert "Termina ogni frase o punto" in llm.user_text
     assert "[S1] Manuale: Manuale caldaia; pagina 7" in llm.user_text
     assert llm.max_tokens == 160

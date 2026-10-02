@@ -1,9 +1,9 @@
 {
-  "timestamp_utc": "2026-08-27T13:57:41.651781+00:00",
+  "timestamp_utc": "2026-10-02T17:12:49.585615+00:00",
   "method": {
     "kind": "synthetic semantic retrieval",
-    "documents": 10,
-    "queries": 10,
+    "documents": 11,
+    "queries": 11,
     "language": "it",
     "manuals_real": false
   },
@@ -11,11 +11,11 @@
     {
       "provider": "hash-dev",
       "dimensions": 384,
-      "top1_correct": 4,
-      "top3_correct": 5,
-      "total": 10,
-      "mean_reciprocal_rank": 0.5272,
-      "total_embedding_seconds": 0.001,
+      "top1_correct": 5,
+      "top3_correct": 6,
+      "total": 11,
+      "mean_reciprocal_rank": 0.5653,
+      "total_embedding_seconds": 0.002,
       "results": [
         {
           "query": "Come tolgo la corrente prima di accedere all'interno?",
@@ -31,7 +31,7 @@
         {
           "query": "Qual è l'intervallo per detergere l'elemento filtrante?",
           "expected": "filter",
-          "rank": 9,
+          "rank": 10,
           "top3": [
             "power",
             "lubrication",
@@ -108,7 +108,7 @@
         {
           "query": "Con cosa vanno ingrassate annualmente le tenute?",
           "expected": "lubrication",
-          "rank": 10,
+          "rank": 11,
           "top3": [
             "filter",
             "torque",
@@ -119,24 +119,35 @@
         {
           "query": "In quale ambiente va riposto l'apparecchio?",
           "expected": "storage",
-          "rank": 5,
+          "rank": 6,
           "top3": [
             "pressure",
             "power",
             "battery"
           ],
           "top1_score": 0.2018
+        },
+        {
+          "query": "In quale stato deve essere un'agenda per poterla modificare?",
+          "expected": "inactive-state",
+          "rank": 1,
+          "top3": [
+            "inactive-state",
+            "storage",
+            "filter"
+          ],
+          "top1_score": 0.3848
         }
       ]
     },
     {
-      "provider": "nomic-embed-text",
+      "provider": "nomic-embed-text-v2-moe",
       "dimensions": 768,
-      "top1_correct": 6,
-      "top3_correct": 8,
-      "total": 10,
-      "mean_reciprocal_rank": 0.7167,
-      "total_embedding_seconds": 0.838,
+      "top1_correct": 10,
+      "top3_correct": 11,
+      "total": 11,
+      "mean_reciprocal_rank": 0.9545,
+      "total_embedding_seconds": 2.22,
       "results": [
         {
           "query": "Come tolgo la corrente prima di accedere all'interno?",
@@ -144,10 +155,10 @@
           "rank": 1,
           "top3": [
             "power",
-            "storage",
-            "replacement"
+            "battery",
+            "pressure"
           ],
-          "top1_score": 0.6776
+          "top1_score": 0.4928
         },
         {
           "query": "Qual è l'intervallo per detergere l'elemento filtrante?",
@@ -155,32 +166,32 @@
           "rank": 1,
           "top3": [
             "filter",
-            "pressure",
-            "storage"
+            "torque",
+            "pressure"
           ],
-          "top1_score": 0.6926
+          "top1_score": 0.4541
         },
         {
           "query": "Quale forza di rotazione va applicata al fissaggio?",
           "expected": "torque",
-          "rank": 6,
+          "rank": 2,
           "top3": [
             "lubrication",
-            "storage",
-            "filter"
+            "torque",
+            "drain"
           ],
-          "top1_score": 0.7167
+          "top1_score": 0.2437
         },
         {
           "query": "Qual è il limite termico consentito durante l'uso?",
           "expected": "temperature",
-          "rank": 6,
+          "rank": 1,
           "top3": [
-            "filter",
-            "torque",
-            "lubrication"
+            "temperature",
+            "storage",
+            "pressure"
           ],
-          "top1_score": 0.6117
+          "top1_score": 0.5118
         },
         {
           "query": "Che cosa significa E104 quando il circuito ha poca pressione?",
@@ -188,10 +199,10 @@
           "rank": 1,
           "top3": [
             "pressure",
-            "battery",
-            "replacement"
+            "drain",
+            "temperature"
           ],
-          "top1_score": 0.825
+          "top1_score": 0.8127
         },
         {
           "query": "Quale anomalia segnala A7 nel condotto di uscita?",
@@ -199,32 +210,32 @@
           "rank": 1,
           "top3": [
             "drain",
-            "lubrication",
-            "filter"
+            "pressure",
+            "replacement"
           ],
-          "top1_score": 0.7117
+          "top1_score": 0.5582
         },
         {
           "query": "Qual è il codice del pezzo sostitutivo ammesso?",
           "expected": "replacement",
-          "rank": 3,
+          "rank": 1,
           "top3": [
+            "replacement",
             "drain",
-            "storage",
-            "replacement"
+            "battery"
           ],
-          "top1_score": 0.6692
+          "top1_score": 0.3234
         },
         {
           "query": "Cosa fare quando la spia rossa pulsa?",
           "expected": "battery",
-          "rank": 2,
+          "rank": 1,
           "top3": [
-            "filter",
             "battery",
-            "lubrication"
+            "power",
+            "drain"
           ],
-          "top1_score": 0.6902
+          "top1_score": 0.3933
         },
         {
           "query": "Con cosa vanno ingrassate annualmente le tenute?",
@@ -235,7 +246,7 @@
             "filter",
             "power"
           ],
-          "top1_score": 0.6817
+          "top1_score": 0.3983
         },
         {
           "query": "In quale ambiente va riposto l'apparecchio?",
@@ -243,10 +254,21 @@
           "rank": 1,
           "top3": [
             "storage",
-            "lubrication",
-            "filter"
+            "battery",
+            "power"
           ],
-          "top1_score": 0.6751
+          "top1_score": 0.417
+        },
+        {
+          "query": "In quale stato deve essere un'agenda per poterla modificare?",
+          "expected": "inactive-state",
+          "rank": 1,
+          "top3": [
+            "inactive-state",
+            "battery",
+            "power"
+          ],
+          "top1_score": 0.7479
         }
       ]
     }

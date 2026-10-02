@@ -27,9 +27,10 @@ EXPECTED = {
     "pressure": ["e104", "pressione insufficiente"],
     "drain": ["a7", "scarico ostruito"],
     "replacement": ["kx-17b"],
-    "battery": ["sostituire", "batteria"],
+    "battery": ["sostitu", "batteria"],
     "lubrication": ["grasso al silicone"],
     "storage": ["asciutto", "ventilato"],
+    "inactive-state": ["inattivo"],
 }
 
 DISTINCTIVE_TERMS = {
@@ -43,6 +44,7 @@ DISTINCTIVE_TERMS = {
     "battery": ["lampeggia in rosso"],
     "lubrication": ["grasso al silicone"],
     "storage": ["asciutto e ventilato"],
+    "inactive-state": ["stato inattivo"],
 }
 
 

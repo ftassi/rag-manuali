@@ -22,6 +22,13 @@ DOCUMENTS = [
     ("battery", "Sostituire la batteria quando l'indicatore lampeggia in rosso."),
     ("lubrication", "Applicare grasso al silicone sulle guarnizioni una volta all'anno."),
     ("storage", "Conservare il dispositivo in un luogo asciutto e ventilato."),
+    (
+        "inactive-state",
+        (
+            "Per modificare un'agenda già attivata, riportarla temporaneamente in stato "
+            "Inattivo. In stato Attivo non può essere modificata."
+        ),
+    ),
 ]
 
 QUERIES = [
@@ -35,6 +42,7 @@ QUERIES = [
     ("Cosa fare quando la spia rossa pulsa?", "battery"),
     ("Con cosa vanno ingrassate annualmente le tenute?", "lubrication"),
     ("In quale ambiente va riposto l'apparecchio?", "storage"),
+    ("In quale stato deve essere un'agenda per poterla modificare?", "inactive-state"),
 ]
 
 

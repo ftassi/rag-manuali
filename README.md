@@ -186,6 +186,10 @@ Firefox headless; non utilizza né conserva manuali reali. Per ricontrollare i r
 rieseguire i modelli usare `make regression-check`. Il solo test del flusso di importazione si può
 lanciare con `make ingestion-eval`.
 
+La regressione include anche un caso dedicato alle negazioni operative e alle coppie opposte
+(`attivo/inattivo`), derivato in forma sintetica dal primo collaudo controllato su un manuale
+reale. Il testo del manuale reale non viene incluso nei report o nel repository.
+
 Per verificare anche il server web reale, l'upload multipart e gli endpoint HTTP senza conservare
 dati di prova usare `make smoke-http`. Il comando avvia Uvicorn soltanto su `127.0.0.1`, sceglie
 una porta locale libera e rimuove il manuale sintetico e il database temporaneo al termine.

@@ -1,17 +1,17 @@
 {
-  "timestamp_utc": "2026-08-27T13:48:45.286488+00:00",
+  "timestamp_utc": "2026-10-02T17:12:33.604439+00:00",
   "method": {
     "kind": "end-to-end synthetic RAG",
-    "cases": 8,
+    "cases": 9,
     "retrieval": "SQLite FTS5 + hash embeddings, document-scoped",
     "manuals_real": false
   },
   "models": [
     {
       "model": "llama3.2:3b",
-      "passed": 8,
-      "total": 8,
-      "median_wall_seconds": 10.192,
+      "passed": 9,
+      "total": 9,
+      "median_wall_seconds": 11.851,
       "results": [
         {
           "id": "error-code",
@@ -22,18 +22,18 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 31.103
+          "wall_seconds": 11.763
         },
         {
           "id": "torque",
           "question": "Qual è la coppia di serraggio del dado della flangia?",
-          "answer": "La coppia di serraggio del dado della flangia è di 12 Nm [S1].",
+          "answer": "La coppia di serraggio del dado della flangia è 12 Nm [S1].",
           "retrieved_expected_source": true,
           "facts_ok": true,
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 10.413
+          "wall_seconds": 12.07
         },
         {
           "id": "maintenance",
@@ -44,7 +44,7 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 9.19
+          "wall_seconds": 11.094
         },
         {
           "id": "temperature",
@@ -55,29 +55,29 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 9.372
+          "wall_seconds": 11.172
         },
         {
           "id": "safety-order",
           "question": "Cosa bisogna fare prima di rimuovere il coperchio?",
-          "answer": "Ecco la risposta:\n\nPrima di rimuovere il coperchio, scollegare l'alimentazione elettrica [S1].",
+          "answer": "Eseguire il passaggio di scollegare l'alimentazione elettrica prima di rimuovere il coperchio [S1].",
           "retrieved_expected_source": true,
           "facts_ok": true,
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 13.895
+          "wall_seconds": 15.273
         },
         {
           "id": "pressure",
           "question": "A quale pressione nominale va regolato il dispositivo?",
-          "answer": "La pressione nominale del dispositivo deve essere regolata a 2,5 bar [S1].",
+          "answer": "La pressione nominale va regolata a 2,5 bar [S1].",
           "retrieved_expected_source": true,
           "facts_ok": true,
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 10.712
+          "wall_seconds": 11.851
         },
         {
           "id": "exact-name",
@@ -88,7 +88,7 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 9.9
+          "wall_seconds": 11.62
         },
         {
           "id": "irrelevant-neighbor",
@@ -99,15 +99,26 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 9.972
+          "wall_seconds": 11.973
+        },
+        {
+          "id": "negation-state",
+          "question": "In quale stato deve essere un'agenda per poterla modificare?",
+          "answer": "In stato Inattivo può essere modificata un'agenda.\n\n[S1] Manuale: Manuale sintetico negation-state; pagina 9; sezione: Dati tecnici",
+          "retrieved_expected_source": true,
+          "facts_ok": true,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": true,
+          "wall_seconds": 17.148
         }
       ]
     },
     {
       "model": "qwen2.5:1.5b",
       "passed": 6,
-      "total": 8,
-      "median_wall_seconds": 5.045,
+      "total": 9,
+      "median_wall_seconds": 5.343,
       "results": [
         {
           "id": "error-code",
@@ -118,40 +129,40 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 15.411
+          "wall_seconds": 18.361
         },
         {
           "id": "torque",
           "question": "Qual è la coppia di serraggio del dado della flangia?",
-          "answer": "[Manuale sintetico torque; pagina 2; sezione: Dati tecnici] Serrare il dado della flangia a 12 Nm.",
+          "answer": "Copia [S1] [S2] [S3] [S4] [S5] [S6] [S7] [S8] [S9] [S10] [S11] [S12] [S13] [S14] [S15] [S16] [S17] [S18] [S19] [S20] [S21] [S22] [S23] [S24] [S25] [S26] [S27] [S28] [S29] [S30] [S31] [S32] [S33] [S",
           "retrieved_expected_source": true,
-          "facts_ok": true,
+          "facts_ok": false,
           "forbidden_ok": true,
-          "citation_ok": false,
+          "citation_ok": true,
           "passed": false,
-          "wall_seconds": 6.387
+          "wall_seconds": 19.253
         },
         {
           "id": "maintenance",
           "question": "Ogni quanto va pulito il filtro dell'aria?",
-          "answer": "Pulire il filtro dell'aria ogni sei mesi [S1].",
+          "answer": "Pulire il filtro dell'aria ogni sei mesi [S1]",
           "retrieved_expected_source": true,
           "facts_ok": true,
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 4.414
+          "wall_seconds": 5.158
         },
         {
           "id": "temperature",
           "question": "Qual è la temperatura massima di esercizio?",
-          "answer": "La temperatura massima di esercizio è 65 °C [S1].",
+          "answer": "65 °C [S1]",
           "retrieved_expected_source": true,
           "facts_ok": true,
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 4.619
+          "wall_seconds": 4.24
         },
         {
           "id": "safety-order",
@@ -162,7 +173,7 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 4.866
+          "wall_seconds": 5.343
         },
         {
           "id": "pressure",
@@ -173,29 +184,40 @@
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 4.785
+          "wall_seconds": 5.441
         },
         {
           "id": "exact-name",
           "question": "Qual è il nome esatto del kit di ricambio compatibile?",
-          "answer": "Il nome esatto del kit di ricambio compatibile è KX-17B. [S1]",
+          "answer": "KX-17B [S1]",
           "retrieved_expected_source": true,
           "facts_ok": true,
           "forbidden_ok": true,
           "citation_ok": true,
           "passed": true,
-          "wall_seconds": 5.225
+          "wall_seconds": 4.645
         },
         {
           "id": "irrelevant-neighbor",
           "question": "Cosa segnala il codice A7?",
-          "answer": "Il codice A7 segnala lo scarico ostruito dopo la manutenzione ordinaria. [S1]",
+          "answer": "Il codice A7 segnala lo scarico ostruito [S1]. Dopo la manutenzione ordinaria si può riavviare il pannello [S2].",
           "retrieved_expected_source": true,
           "facts_ok": true,
           "forbidden_ok": false,
           "citation_ok": true,
           "passed": false,
-          "wall_seconds": 5.614
+          "wall_seconds": 7.571
+        },
+        {
+          "id": "negation-state",
+          "question": "In quale stato deve essere un'agenda per poterla modificare?",
+          "answer": "In stato Attivo non può essere modificata. [S1]",
+          "retrieved_expected_source": true,
+          "facts_ok": false,
+          "forbidden_ok": true,
+          "citation_ok": true,
+          "passed": false,
+          "wall_seconds": 5.249
         }
       ]
     }

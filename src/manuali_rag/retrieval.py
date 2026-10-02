@@ -1,12 +1,15 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from pathlib import Path
 
 from .config import Settings
 from .embeddings import Embedder
 from .llm import LLMClient
-from .store import SearchHit, Store
+from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
+
+IDENTIFIER_RE = re.compile(r"\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
 
 
 @dataclass(slots=True)
@@ -27,6 +30,53 @@ def _select_answer_sources(hits: list[SearchHit], ambiguity_margin: float) -> li
     ):
         return hits[:2]
     return hits[:1]
+
+
+def _term_features(text: str) -> set[str]:
+    features: set[str] = set()
+    for token in FTS_TOKEN_RE.findall(text.casefold()):
+        if token in FTS_STOPWORDS or (
+            len(token) <= 2 and not any(char.isdigit() for char in token)
+        ):
+            continue
+        features.add(token)
+        if len(token) >= 6 and token.isalpha():
+            features.add(token[:5])
+    return features
+
+
+def _relevant_excerpt(content: str, question: str, max_blocks: int = 3) -> str:
+    blocks = [block.strip() for block in content.split("\n\n") if block.strip()]
+    if len(blocks) <= max_blocks:
+        return content
+    question_features = _term_features(question)
+    ranked = sorted(
+        (
+            (len(question_features & _term_features(block)), index)
+            for index, block in enumerate(blocks)
+        ),
+        key=lambda item: (-item[0], item[1]),
+    )
+    selected = sorted(index for score, index in ranked[:max_blocks] if score > 0)
+    if not selected:
+        return content
+    return "\n\n".join(blocks[index] for index in selected)
+
+
+def _required_identifier(question: str, hits: list[SearchHit], answer: str) -> str | None:
+    question_terms = set(FTS_TOKEN_RE.findall(question.casefold()))
+    if not question_terms & {"codice", "identificatore", "sigla"}:
+        return None
+    identifiers = {
+        identifier
+        for hit in hits
+        for identifier in IDENTIFIER_RE.findall(hit.content)
+        if not re.fullmatch(r"S\d+", identifier)
+    }
+    if len(identifiers) != 1:
+        return None
+    identifier = identifiers.pop()
+    return identifier if identifier.casefold() not in answer.casefold() else None
 
 
 class Retriever:
@@ -99,7 +149,7 @@ class AnswerService:
             page = f"pagina {hit.page}" if hit.page else "pagina non specificata"
             source_blocks.append(
                 f"[S{index}] Manuale: {hit.manual_title}; {page}; sezione: {hit.section}\n"
-                f"{hit.content}"
+                f"{_relevant_excerpt(hit.content, question)}"
             )
             if (
                 include_images
@@ -118,7 +168,12 @@ class AnswerService:
             "domanda e riformulali nel minimo numero di parole. Ometti gli argomenti vicini ma "
             "non pertinenti. Non aggiungere spiegazioni, motivazioni, scopi, cause, conseguenze, "
             "consigli o conoscenze generali, anche se plausibili. Non colmare parti confuse o "
-            "mancanti.\n\n"
+            "mancanti. Prima di rispondere individua in silenzio la frase esatta che risponde alla "
+            "domanda e controllane le negazioni. Se la domanda chiede quando o in quale stato "
+            "un'operazione può essere eseguita, uno stato per cui la fonte dice 'non può' deve "
+            "essere escluso dalla risposta: cerca invece l'istruzione positiva esplicita. "
+            "Conserva esattamente coppie opposte come attivo/inattivo o consentito/vietato e non "
+            "trasformare 'non può' in 'può'.\n\n"
             f"DOMANDA\n{question}\n\n"
             "FONTI\n" + "\n\n".join(source_blocks) + "\n\nVINCOLI DI USCITA\n"
             "Rispondi in italiano con una sola frase breve, oppure con al massimo cinque punti "
@@ -130,4 +185,13 @@ class AnswerService:
             '"Le fonti fornite non contengono questa informazione."'
         )
         text = self.llm.complete(user_text=prompt, image_paths=image_paths, max_tokens=160)
+        missing_identifier = _required_identifier(question, hits, text)
+        if missing_identifier:
+            correction = (
+                f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
+                f"La fonte contiene l'identificatore esatto {missing_identifier}. La risposta "
+                "precedente lo ha omesso o troncato. Rispondi di nuovo copiandolo integralmente, "
+                "carattere per carattere, e mantieni la citazione."
+            )
+            text = self.llm.complete(user_text=correction, image_paths=image_paths, max_tokens=160)
         return Answer(text=text, sources=hits)

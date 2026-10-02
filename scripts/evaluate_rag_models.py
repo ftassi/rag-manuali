@@ -74,6 +74,14 @@ CASES = [
         "expected": ["scarico ostruito"],
         "forbidden": ["riavviare", "manutenzione ordinaria"],
     },
+    {
+        "id": "negation-state",
+        "source": "Per modificare un'agenda già attivata, riportarla temporaneamente in stato "
+        "Inattivo. In stato Attivo non può essere modificata.",
+        "question": "In quale stato deve essere un'agenda per poterla modificare?",
+        "expected": ["inattivo"],
+        "forbidden": ["stato attivo per poterla modificare", "in stato attivo."],
+    },
 ]
 
 
