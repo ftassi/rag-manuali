@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-10-02T17:25:55.435900+00:00",
+  "timestamp_utc": "2026-10-02T17:53:02.906977+00:00",
   "method": {
     "kind": "Firefox headless synthetic UI smoke test",
     "manuals_real": false,
@@ -8,7 +8,7 @@
   "summary": {
     "checks_passed": 7,
     "total": 7,
-    "wall_seconds": 20.857
+    "wall_seconds": 20.53
   },
   "checks": {
     "page_loaded": true,

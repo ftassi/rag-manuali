@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-10-02T17:21:58.289664+00:00",
+  "timestamp_utc": "2026-10-02T17:49:13.284828+00:00",
   "method": {
     "kind": "synthetic semantic retrieval",
     "documents": 11,
@@ -147,7 +147,7 @@
       "top3_correct": 11,
       "total": 11,
       "mean_reciprocal_rank": 0.9545,
-      "total_embedding_seconds": 2.216,
+      "total_embedding_seconds": 2.174,
       "results": [
         {
           "query": "Come tolgo la corrente prima di accedere all'interno?",

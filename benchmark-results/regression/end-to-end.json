@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-10-02T17:24:38.910782+00:00",
+  "timestamp_utc": "2026-10-02T17:51:48.826527+00:00",
   "method": {
     "kind": "unscoped end-to-end synthetic RAG",
     "documents": 11,
@@ -14,7 +14,7 @@
     "retrieval_top3": 11,
     "answers_passed": 11,
     "total": 11,
-    "median_wall_seconds": 13.211
+    "median_wall_seconds": 13.056
   },
   "results": [
     {
@@ -29,7 +29,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 15.133
+      "wall_seconds": 14.715
     },
     {
       "question": "Qual è l'intervallo per detergere l'elemento filtrante?",
@@ -43,7 +43,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 13.023
+      "wall_seconds": 13.056
     },
     {
       "question": "Quale forza di rotazione va applicata al fissaggio?",
@@ -58,7 +58,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 13.944
+      "wall_seconds": 13.836
     },
     {
       "question": "Qual è il limite termico consentito durante l'uso?",
@@ -72,7 +72,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 11.516
+      "wall_seconds": 11.482
     },
     {
       "question": "Che cosa significa E104 quando il circuito ha poca pressione?",
@@ -86,7 +86,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 11.411
+      "wall_seconds": 10.951
     },
     {
       "question": "Quale anomalia segnala A7 nel condotto di uscita?",
@@ -100,7 +100,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 11.654
+      "wall_seconds": 11.274
     },
     {
       "question": "Qual è il codice del pezzo sostitutivo ammesso?",
@@ -114,7 +114,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 22.198
+      "wall_seconds": 20.5
     },
     {
       "question": "Cosa fare quando la spia rossa pulsa?",
@@ -128,7 +128,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 14.376
+      "wall_seconds": 13.584
     },
     {
       "question": "Con cosa vanno ingrassate annualmente le tenute?",
@@ -142,7 +142,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 13.144
+      "wall_seconds": 12.096
     },
     {
       "question": "In quale ambiente va riposto l'apparecchio?",
@@ -156,7 +156,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 13.211
+      "wall_seconds": 12.373
     },
     {
       "question": "In quale stato deve essere un'agenda per poterla modificare?",
@@ -170,7 +170,7 @@
       "citation_ok": true,
       "contamination": [],
       "passed": true,
-      "wall_seconds": 17.15
+      "wall_seconds": 17.856
     }
   ]
 }

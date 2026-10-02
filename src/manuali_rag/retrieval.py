@@ -108,6 +108,13 @@ class Retriever:
             fused[chunk_id] = fused.get(chunk_id, 0.0) + (
                 self.settings.retrieval_lexical_weight / (self.settings.retrieval_rrf_k + rank)
             )
+        # Nei manuali lunghi una corrispondenza lessicale precisa può non comparire tra i primi
+        # candidati semantici. Un secondo contributo al solo primo risultato FTS evita che venga
+        # superato da passaggi generici presenti in entrambe le liste.
+        if lexical:
+            fused[lexical[0]] += self.settings.retrieval_lexical_weight / (
+                self.settings.retrieval_rrf_k + 1
+            )
         ranked = sorted(fused.items(), key=lambda item: item[1], reverse=True)[:top_k]
         return self.store.get_hits(ranked, semantic_scores)
 

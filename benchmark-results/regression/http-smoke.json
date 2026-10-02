@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-10-02T17:25:34.234083+00:00",
+  "timestamp_utc": "2026-10-02T17:52:42.035866+00:00",
   "method": {
     "kind": "real HTTP synthetic smoke test",
     "manuals_real": false,
@@ -8,7 +8,7 @@
   "summary": {
     "checks_passed": 6,
     "total": 6,
-    "wall_seconds": 14.308
+    "wall_seconds": 14.171
   },
   "checks": {
     "health_before_empty": true,
@@ -30,7 +30,7 @@
         "content": "## Diagnostica\nIl codice R17 indica che la valvola di ritorno è bloccata.",
         "image_path": null,
         "visual_summary": null,
-        "score": 0.03278688524590164,
+        "score": 0.04918032786885246,
         "semantic_score": 0.5453757354773652,
         "page_url": null
       }

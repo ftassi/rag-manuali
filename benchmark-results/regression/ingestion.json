@@ -1,5 +1,5 @@
 {
-  "timestamp_utc": "2026-10-02T17:25:19.734717+00:00",
+  "timestamp_utc": "2026-10-02T17:52:27.672791+00:00",
   "method": {
     "kind": "synthetic Markdown ingestion end-to-end",
     "manuals_real": false,
@@ -14,7 +14,7 @@
     "chunk_count": 3,
     "warnings": [],
     "already_indexed": false,
-    "wall_seconds": 0.636,
+    "wall_seconds": 0.624,
     "stored_markdown_exists": true,
     "repeat_already_indexed": true
   },
@@ -38,7 +38,7 @@
       "citation_ok": true,
       "retrieval_ok": true,
       "passed": true,
-      "wall_seconds": 13.527
+      "wall_seconds": 12.872
     },
     {
       "question": "Ogni quanto bisogna pulire il filtro e con cosa?",
@@ -55,7 +55,7 @@
       "citation_ok": true,
       "retrieval_ok": true,
       "passed": true,
-      "wall_seconds": 13.73
+      "wall_seconds": 12.784
     },
     {
       "question": "Che cosa significa il codice Q9?",
@@ -72,7 +72,7 @@
       "citation_ok": true,
       "retrieval_ok": true,
       "passed": true,
-      "wall_seconds": 12.585
+      "wall_seconds": 12.228
     }
   ]
 }

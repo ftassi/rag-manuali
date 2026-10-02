@@ -101,6 +101,48 @@ def test_lexical_retrieval_ignores_generic_question_words(tmp_path: Path) -> Non
     assert len(exact) == 1
 
 
+class FixedEmbedder:
+    model_name = "fixed"
+
+    def embed(self, texts) -> list[list[float]]:
+        return [[1.0, 0.0] for _ in texts]
+
+
+def test_precise_lexical_winner_survives_wrong_semantic_ranking(tmp_path: Path) -> None:
+    settings = settings_for(tmp_path)
+    store = Store(settings.database_path)
+    chunks = [
+        ChunkInput(
+            page=11,
+            section="Login",
+            content="Dopo un'autenticazione riuscita selezionare il reparto abilitato.",
+        ),
+        ChunkInput(
+            page=190,
+            section="Privacy",
+            content="L'operatore accede allo storico del reparto.",
+        ),
+    ]
+    store.replace_document(
+        document_id="long-manual",
+        checksum="long-manual",
+        source_name="manuale.pdf",
+        title="Manuale lungo",
+        markdown_path="",
+        page_count=200,
+        warnings=[],
+        chunks=chunks,
+        embeddings=[[0.0, 1.0], [1.0, 0.0]],
+        embedding_model="fixed",
+    )
+
+    hits = Retriever(store, FixedEmbedder(), settings).search(
+        "Cosa selezionare dopo un'autenticazione riuscita?", top_k=2
+    )
+
+    assert [hit.page for hit in hits] == [11, 190]
+
+
 def _hit(chunk_id: int, semantic_score: float) -> SearchHit:
     return SearchHit(
         chunk_id=chunk_id,
