@@ -223,13 +223,11 @@ class RecordingLLM:
     def __init__(self) -> None:
         self.user_text = ""
 
-    def complete(self, *, user_text: str, image_paths: list[Path], max_tokens: int) -> str:
+    def complete(self, *, user_text: str, image_paths: list[Path], max_tokens: int,
+                 system_prompt: str) -> str:
         self.user_text = user_text
         self.max_tokens = max_tokens
-        return json.dumps({"quotes": [{
-            "source": 1,
-            "text": "L'errore E104 indica una pressione insufficiente nel circuito.",
-        }]})
+        return json.dumps({"extracts": [1]})
 
 
 def test_answer_prompt_requires_supported_concise_answer(tmp_path: Path) -> None:
@@ -264,21 +262,25 @@ def test_answer_prompt_requires_supported_concise_answer(tmp_path: Path) -> None
 
 
 def test_grounded_answer_rejects_invented_procedure_and_invalid_citation() -> None:
-    excerpts = ["Cliccare su Accesso temporaneo. Per i dettagli consultare il manuale dedicato."]
+    excerpts = [(1, "Cliccare su Accesso temporaneo.")]
     invented = {"quotes": [{"source": 1, "text": "Selezionare il reparto desiderato."}]}
     assert _grounded_answer(json.dumps(invented), excerpts) is None
-    wrong_source = {"quotes": [{"source": 2, "text": "Cliccare su Accesso temporaneo."}]}
+    wrong_source = {"extracts": [2]}
     assert _grounded_answer(json.dumps(wrong_source), excerpts) is None
+    assert _grounded_answer('{"extracts": [true]}', excerpts) is None
+    assert _grounded_answer('{"extracts": ["Selezionare il reparto"]}', excerpts) is None
 
 
-def test_grounded_answer_preserves_permission_limits_and_normalizes_line_wraps() -> None:
-    excerpt = "Nell’elenco vengono proposti i soli reparti\na cui l’utente è abilitato."
-    payload = {"quotes": [{"source": 1, "text": excerpt.replace("\n", " ")}]}
-    assert _grounded_answer(json.dumps(payload), [excerpt]) == (
+def test_grounded_answer_preserves_permission_limits_and_source_mapping() -> None:
+    excerpt = "Nell’elenco vengono proposti i soli reparti a cui l’utente è abilitato."
+    payload = {"extracts": [2]}
+    excerpts = [(2, "Premere Accedi."), (1, excerpt)]
+    assert _grounded_answer(json.dumps(payload), excerpts) == (
         "Nell’elenco vengono proposti i soli reparti a cui l’utente è abilitato. [S1]"
     )
-    payload["quotes"][0]["text"] = "Nell’elenco vengono proposti i reparti."
-    assert _grounded_answer(json.dumps(payload), [excerpt]) is None
+    assert _grounded_answer('{"extracts": []}', excerpts) == (
+        "Le fonti fornite non contengono questa informazione."
+    )
 
 
 def test_answer_service_never_displays_unverified_model_output(tmp_path: Path) -> None:

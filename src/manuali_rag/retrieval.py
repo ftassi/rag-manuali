@@ -19,33 +19,27 @@ class Answer:
     sources: list[SearchHit]
 
 
-def _grounded_answer(text: str, excerpts: list[str]) -> str | None:
-    """Accetta solo estratti copiati dalle fonti, senza passaggi generati."""
+def _grounded_answer(text: str, excerpts: list[tuple[int, str]]) -> str | None:
+    """Il modello seleziona estratti; testo e citazioni provengono dal programma."""
     try:
         payload = json.loads(text)
     except (ValueError, TypeError):
         return None
-    if not isinstance(payload, dict) or not isinstance(payload.get("quotes"), list):
+    if not isinstance(payload, dict) or not isinstance(payload.get("extracts"), list):
         return None
-    quotes = payload["quotes"]
-    if not quotes:
+    selected = payload["extracts"]
+    if not selected:
         return "Le fonti fornite non contengono questa informazione."
-    if not 1 <= len(quotes) <= 5:
+    if not 1 <= len(selected) <= 5:
         return None
     lines = []
-    for quote in quotes:
-        if not isinstance(quote, dict):
+    for index in selected:
+        if type(index) is not int or not 1 <= index <= len(excerpts):
             return None
-        source = quote.get("source")
-        value = quote.get("text")
-        if type(source) is not int or not 1 <= source <= len(excerpts):
-            return None
-        if not isinstance(value, str) or not value.strip():
-            return None
-        normalized = " ".join(value.split())
-        if normalized not in " ".join(excerpts[source - 1].split()):
-            return None
-        lines.append(f"{normalized} [S{source}]")
+        source, value = excerpts[index - 1]
+        line = f"{value} [S{source}]"
+        if line not in lines:
+            lines.append(line)
     return "\n".join(lines)
 
 
@@ -182,16 +176,21 @@ class AnswerService:
         hits = _select_answer_sources(hits, self.settings.answer_ambiguity_margin)
 
         source_blocks: list[str] = []
-        excerpts: list[str] = []
+        excerpts: list[tuple[int, str]] = []
         image_paths: list[Path] = []
         seen_images: set[str] = set()
         for index, hit in enumerate(hits, start=1):
             page = f"pagina {hit.page}" if hit.page else "pagina non specificata"
             excerpt = _relevant_excerpt(hit.content, question)
-            excerpts.append(excerpt)
+            numbered: list[str] = []
+            for block in excerpt.split("\n\n"):
+                for sentence in re.split(r"(?<=[.!?])\s+", " ".join(block.split())):
+                    if sentence:
+                        excerpts.append((index, sentence))
+                        numbered.append(f"[F{len(excerpts)}] {sentence}")
             source_blocks.append(
                 f"[S{index}] Manuale: {hit.manual_title}; {page}; sezione: {hit.section}\n"
-                f"{excerpt}"
+                + "\n".join(numbered)
             )
             if (
                 include_images
@@ -222,24 +221,34 @@ class AnswerService:
             "trasformare 'non può' in 'può'.\n\n"
             f"DOMANDA\n{question}\n\n"
             "FONTI\n" + "\n\n".join(source_blocks) + "\n\nVINCOLI DI USCITA\n"
-            "Per ogni parte della domanda scegli una frase completa della fonte, compresi "
-            "condizioni e limiti. Non riscrivere le frasi. Restituisci esclusivamente un oggetto "
-            'JSON nel formato {"quotes": [{"source": 1, "text": "frase copiata dalla fonte"}]}. '
-            "Usa da uno a cinque estratti. Il numero source identifica S1, S2, ecc. "
+            "Per ogni parte della domanda scegli la frase F pertinente, compresi condizioni "
+            "e limiti. Se la frase richiede un passaggio vicino per essere comprensibile, "
+            "seleziona anche quello. Restituisci esclusivamente un oggetto JSON con i numeri "
+            'delle frasi, ad esempio {"extracts": [2, 3]}. '
+            "Usa da uno a cinque estratti. Non includere testo né numeri S nel JSON. "
             "Copia codici e identificatori per intero, carattere per carattere, inclusi prefissi, "
             "cifre e trattini. "
-            'Se le fonti non contengono la risposta, restituisci {"quotes": []}.'
+            'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
         )
-        raw = self.llm.complete(user_text=prompt, image_paths=image_paths, max_tokens=350)
+        output_options = {
+            "image_paths": image_paths,
+            "max_tokens": 80,
+            "system_prompt": (
+                "Seleziona le frasi del manuale che rispondono alla domanda. "
+                "Restituisci solo JSON con la chiave extracts e un elenco di numeri interi. "
+                "Non aggiungere spiegazioni."
+            ),
+        }
+        raw = self.llm.complete(user_text=prompt, **output_options)
         text = _grounded_answer(raw, excerpts)
         if text is None:
             correction = (
                 f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
                 "La risposta precedente non contiene estratti verificabili nel formato richiesto. "
-                "Copia solo frasi presenti nelle FONTI, carattere per carattere, senza aggiunte. "
-                "Restituisci esclusivamente il JSON richiesto."
+                "Usa solo numeri F presenti nelle FONTI. "
+                'Restituisci esclusivamente {"extracts": [numeri delle frasi pertinenti]}.'
             )
-            raw = self.llm.complete(user_text=correction, image_paths=image_paths, max_tokens=350)
+            raw = self.llm.complete(user_text=correction, **output_options)
             text = _grounded_answer(raw, excerpts)
         if text is None:
             text = (

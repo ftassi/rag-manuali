@@ -180,9 +180,9 @@ seconda solo quando la differenza assoluta di similarità è al massimo
 `MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02` e il punteggio ibrido della seconda dista
 al massimo del 2% da quello della prima (con il margine predefinito).
 
-Le risposte riportano estratti delle fonti: ogni estratto viene controllato nel testo
-effettivamente fornito al modello prima di mostrarlo con la sua citazione. Se il modello
-parafrasa o aggiunge passaggi, il sistema richiede una correzione; se anche questa non è
+Le risposte riportano estratti delle fonti: il modello seleziona frasi numerate e il programma
+mostra il loro testo originale con la citazione corrispondente. Se il modello
+restituisce una selezione non valida, il sistema richiede una correzione; se anche questa non è
 verificabile, mostra un messaggio di mancata verifica e le pagine da consultare.
 Questo controllo impedisce testo aggiunto, ma non garantisce che il modello scelga tutti
 i passaggi necessari o interpreti correttamente quale risponde alla domanda.
