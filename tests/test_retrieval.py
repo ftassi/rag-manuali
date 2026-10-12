@@ -6,7 +6,9 @@ from manuali_rag.embeddings import HashEmbedder
 from manuali_rag.retrieval import (
     AnswerService,
     Retriever,
+    _candidate_indices,
     _complete_list_selection,
+    _credential_value_supported,
     _grounded_answer,
     _relevant_excerpt,
     _required_identifier,
@@ -314,6 +316,24 @@ def test_configurable_list_preserves_both_options_and_context() -> None:
 def test_list_completion_does_not_cross_source_boundary() -> None:
     excerpts = [(1, "In base alla configurazione:"), (2, "• Azione diversa.")]
     assert _complete_list_selection([1], excerpts) == [1]
+
+
+def test_default_filter_does_not_support_default_credential() -> None:
+    assert not _credential_value_supported(
+        "Qual è la password predefinita?", [(1, "Il filtro predefinito mostra tutte le voci.")]
+    )
+    assert _credential_value_supported(
+        "Qual è la password iniziale?", [(1, "La password predefinita è DEMO-ONLY.")]
+    )
+    assert _credential_value_supported("Come cambio la password?", [(1, "Premere Salva.")])
+
+
+def test_candidate_shortlist_keeps_relevant_fact_among_menu_labels() -> None:
+    excerpts = [(1, f"• Sezione numero {index}") for index in range(20)]
+    excerpts.append((1, "Le note sono modificabili per un periodo configurabile."))
+    selected = _candidate_indices("Per quale periodo sono modificabili le note?", excerpts)
+    assert len(selected) == 8
+    assert 21 in selected
 
 
 def test_grounded_answer_preserves_permission_limits_and_source_mapping() -> None:

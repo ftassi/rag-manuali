@@ -27,7 +27,7 @@ def _source_sentences(excerpt: str) -> list[str]:
             continue
         if re.match(r"^\d+(?:\.\d+)+\s+[^.!?]+$", normalized):
             continue
-        if re.match(r"^\w+\s*[–-]\s*\d+(?:\.\d+)+$", normalized):
+        if re.match(r"^\w+\s*[–-]\s*\d+(?:\.\d+)+(?:\s+[A-Z0-9]+)*$", normalized):
             continue
         if normalized.startswith("Confidential") and "Record name:" in normalized:
             continue
@@ -76,6 +76,25 @@ def _complete_list_selection(selected: list[int], excerpts: list[tuple[int, str]
         if "configur" in context.casefold() or "obbligator" in context.casefold():
             completed.update([offset + 1, *children])
     return sorted(completed)
+
+
+def _credential_value_supported(question: str, excerpts: list[tuple[int, str]]) -> bool:
+    credential = re.compile(r"password|credenzial|parola\s+d['’]ordine", re.IGNORECASE)
+    initial = re.compile(r"predefinit|default|inizial", re.IGNORECASE)
+    if not credential.search(question) or not initial.search(question):
+        return True
+    if re.search(r"\bcome\b", question, re.IGNORECASE):
+        return True
+    return any(credential.search(text) and initial.search(text) for _, text in excerpts)
+
+
+def _candidate_indices(question: str, excerpts: list[tuple[int, str]], limit: int = 8) -> list[int]:
+    features = _term_features(question)
+    ranked = sorted(
+        range(1, len(excerpts) + 1),
+        key=lambda index: (-len(features & _term_features(excerpts[index - 1][1])), index),
+    )
+    return sorted(ranked[:limit])
 
 
 def _render_excerpts(selected: list[int], excerpts: list[tuple[int, str]]) -> str:
@@ -252,17 +271,13 @@ class AnswerService:
         # entrambi i punteggi (semantico e ibrido) sono quasi equivalenti.
         hits = _select_answer_sources(hits, self.settings.answer_ambiguity_margin)
 
-        source_blocks: list[str] = []
         excerpts: list[tuple[int, str]] = []
         image_paths: list[Path] = []
         seen_images: set[str] = set()
         for index, hit in enumerate(hits, start=1):
             excerpt = _relevant_excerpt(hit.content, question)
-            numbered: list[str] = []
             for sentence in _source_sentences(excerpt):
                 excerpts.append((index, sentence))
-                numbered.append(f"[F{len(excerpts)}] {sentence}")
-            source_blocks.append("\n".join(numbered))
             if (
                 include_images
                 and hit.image_path
@@ -274,35 +289,34 @@ class AnswerService:
                     image_paths.append(candidate)
                     seen_images.add(hit.image_path)
 
-        if not excerpts:
+        if not excerpts or not _credential_value_supported(question, excerpts):
             return Answer(
-                text="Le fonti fornite non contengono questa informazione.", sources=hits
+                text="Le fonti fornite non contengono questa informazione.", sources=[]
             )
 
+        candidates = _candidate_indices(question, excerpts)
         prompt = (
             f"DOMANDA: {question}\nPASSAGGI:\n"
-            + "\n".join(source_blocks)
-            + "\nIndica in requested_info quale informazione viene richiesta, in poche parole. "
-            "Poi scegli in extracts solo le frasi che forniscono proprio quell'informazione, "
-            "non le frasi che citano soltanto lo stesso argomento. "
+            + "\n".join(f"[F{index}] {excerpts[index - 1][1]}" for index in candidates)
+            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
             "Se le fonti non contengono la risposta, extracts deve essere vuoto."
         )
         output_options = {
             "image_paths": image_paths,
-            "max_tokens": 120,
+            "max_tokens": 80,
             "response_schema": {
                 "type": "object",
-                "properties": {"requested_info": {"type": "string"}, "extracts": {
+                "properties": {"extracts": {
                     "type": "array",
-                    "items": {"type": "integer", "enum": list(range(1, len(excerpts) + 1))},
+                    "items": {"type": "integer", "enum": candidates},
                     "maxItems": 5,
                 }},
-                "required": ["requested_info", "extracts"],
+                "required": ["extracts"],
                 "additionalProperties": False,
             },
             "system_prompt": (
-                "Identifica l'informazione richiesta e seleziona le frasi che la contengono. "
-                "Restituisci JSON con requested_info ed extracts, array di numeri interi."
+                "Seleziona le frasi pertinenti. Restituisci JSON con extracts, "
+                "array di numeri interi."
             ),
         }
         raw = self.llm.complete(user_text=prompt, **output_options)
