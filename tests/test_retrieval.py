@@ -10,6 +10,7 @@ from manuali_rag.retrieval import (
     _relevant_excerpt,
     _required_identifier,
     _select_answer_sources,
+    _source_sentences,
 )
 from manuali_rag.store import ChunkInput, SearchHit, Store
 
@@ -269,6 +270,12 @@ def test_grounded_answer_rejects_invented_procedure_and_invalid_citation() -> No
     assert _grounded_answer(json.dumps(wrong_source), excerpts) is None
     assert _grounded_answer('{"extracts": [true]}', excerpts) is None
     assert _grounded_answer('{"extracts": ["Selezionare il reparto"]}', excerpts) is None
+
+
+def test_source_sentences_exclude_caption_without_losing_short_instructions() -> None:
+    assert _source_sentences(
+        "Figura 1-2 Selezione Reparto\n\nPremere Accedi.\nSelezionare il reparto abilitato."
+    ) == ["Premere Accedi.", "Selezionare il reparto abilitato."]
 
 
 def test_grounded_answer_preserves_permission_limits_and_source_mapping() -> None:

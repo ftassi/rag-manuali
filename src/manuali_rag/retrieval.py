@@ -19,6 +19,18 @@ class Answer:
     sources: list[SearchHit]
 
 
+def _source_sentences(excerpt: str) -> list[str]:
+    sentences = []
+    for block in excerpt.split("\n\n"):
+        normalized = " ".join(block.split())
+        if re.match(r"^(?:Figura|Tabella)\s+\d", normalized, re.IGNORECASE):
+            continue
+        sentences.extend(
+            sentence for sentence in re.split(r"(?<=[.!?])\s+", normalized) if sentence
+        )
+    return sentences
+
+
 def _grounded_answer(text: str, excerpts: list[tuple[int, str]]) -> str | None:
     """Il modello seleziona estratti; testo e citazioni provengono dal programma."""
     text = text.strip()
@@ -186,11 +198,9 @@ class AnswerService:
             page = f"pagina {hit.page}" if hit.page else "pagina non specificata"
             excerpt = _relevant_excerpt(hit.content, question)
             numbered: list[str] = []
-            for block in excerpt.split("\n\n"):
-                for sentence in re.split(r"(?<=[.!?])\s+", " ".join(block.split())):
-                    if sentence:
-                        excerpts.append((index, sentence))
-                        numbered.append(f"[F{len(excerpts)}] {sentence}")
+            for sentence in _source_sentences(excerpt):
+                excerpts.append((index, sentence))
+                numbered.append(f"[F{len(excerpts)}] {sentence}")
             source_blocks.append(
                 f"[S{index}] Manuale: {hit.manual_title}; {page}; sezione: {hit.section}\n"
                 + "\n".join(numbered)
