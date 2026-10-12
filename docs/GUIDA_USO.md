@@ -114,8 +114,9 @@ Indica il modulo, il nome del controllo o l'operazione. Preferisci una domanda s
 concreto a una richiesta molto generica. Quando il vincolo conta, chiedilo esplicitamente:
 «Quando si abilita questo pulsante?» oppure «Questa operazione è consentita in quello stato?».
 
-Le risposte riportano estratti del manuale. Il modello seleziona frasi numerate; il programma
-mostra il testo originale e la relativa citazione `[S1]`, `[S2]`, ecc. Le fonti inutilizzate
+Le risposte riportano estratti del manuale. Il programma confronta i singoli passaggi con
+la domanda usando i modelli locali; nei casi ambigui interviene il modello di selezione.
+Mostra il testo originale e la relativa citazione `[S1]`, `[S2]`, ecc. Le fonti inutilizzate
 non sono mostrate nelle risposte verificate. Il controllo evita frasi inventate, ma non
 garantisce che le frasi selezionate rispondano alla domanda o che la risposta sia completa.
 
@@ -148,8 +149,8 @@ make search QUESTION="La mia domanda"
 
 ### Limiti osservati nel collaudo reale
 
-Il collaudo QARA del 12 ottobre ha rilevato che una domanda su un'informazione assente
-può ricevere frasi non pertinenti invece di una mancata risposta. Ha rilevato anche domande
+Il primo collaudo QARA del 12 ottobre aveva rilevato che una domanda su un'informazione assente
+poteva ricevere frasi non pertinenti invece di una mancata risposta. Aveva rilevato anche domande
 che trovano la pagina corretta ma restano senza risposta, risposte con frasi superflue e
 una risposta incompleta sulle alternative previste dalla configurazione.
 
@@ -157,7 +158,10 @@ Quando chiedi un valore, una credenziale, una condizione o un elenco di alternat
 controlla che la pagina contenga proprio quell'informazione: una citazione non basta.
 Non interpretare un estratto su un altro argomento come la risposta alla tua domanda.
 Se la risposta dipende da configurazione o permessi, verifica il contesto e tutte le
-alternative nella pagina citata. Questi limiti devono essere corretti e ricollaudati.
+alternative nella pagina citata. Le correzioni successive selezionano passaggi più mirati,
+mantengono il contesto delle liste configurabili e dei campi obbligatori, e richiedono un
+riscontro esplicito per le richieste di credenziali iniziali. Il ricollaudo delle stesse domande
+è riportato sotto; non certifica tutte le possibili domande o tutti i manuali futuri.
 
 ## 6. Uso offline e riservatezza
 
@@ -225,6 +229,19 @@ su GitHub. Per un ripristino, mantieni insieme database e pagine corrispondenti.
 Per controllare il codice sul Raspberry: `make check`. Per vedere i target disponibili:
 `make help`. Non eseguire una nuova installazione o una regressione completa per ogni domanda.
 
+Per ripetere il collaudo QARA mantenendo domande e risposte private:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+make manual-eval CASES=data/evaluations/qara-cases.json MANUAL_EVAL_OUTPUT=data/evaluations/qara-corrected-2026-10-12.json
+```
+
+Il comando verifica fatti richiesti, pagine, citazioni, alternative e frasi superflue note;
+termina con errore se un caso non supera i controlli. Richiede il manuale ancora indicizzato
+e il file dei casi locale: questi dati non arrivano tramite GitHub. Il report completo resta
+in `data/evaluations/` e non va pubblicato. I criteri vanno aggiornati quando cambi manuale
+o aggiungi nuove prove; non modificare le aspettative solo per far passare una risposta errata.
+
 ## 9. Aggiornamenti del codice dal PC
 
 Il codice viene modificato sul PC in `/home/michele/Progetti/rag-manuali`; test e modelli
@@ -283,11 +300,15 @@ riservati nella guida o nella cronologia pubblica.
 - **12 ottobre 2026:** prima guida pratica; avvio manuale, importazione, domande, fonti,
   revisioni dei documenti, uso locale/offline, backup e manutenzione tramite GitHub;
   aggiunti risultati e limiti del collaudo reale QARA.
+- **12 ottobre 2026, correzioni:** passaggi separati dalle intestazioni, liste complete,
+  selezione semantica locale e controllo delle richieste di credenziali iniziali;
+  aggiunto il comando di collaudo privato ripetibile.
 
 ## 11. Collaudi e prossimi passi
 
-- Il collaudo sintetico del codice `820a925` ha superato 11/11 casi.
-- **Collaudo reale QARA, 12 ottobre 2026, codice `820a925`:** 14 domande, di cui 12 su
+- Il codice `df7469e` ha superato 37 test automatici, 11/11 casi sintetici end-to-end
+  e 6/6 controlli HTTP di importazione, ricerca e domanda.
+- **Primo collaudo reale QARA, 12 ottobre 2026, codice `820a925`:** 14 domande, di cui 12 su
   informazioni presenti e 2 su informazioni assenti. Dopo il controllo della pagina
   alternativa corretta, 11/12 domande positive contengono i fatti e le fonti attesi;
   1/2 domande negative viene rifiutata correttamente. Questi numeri non certificano
@@ -297,11 +318,17 @@ riservati nella guida o nella cronologia pubblica.
 - Il report dettagliato e la revisione restano sul Raspberry in
   `data/evaluations/qara-expanded-2026-10-12.json`, fuori da Git. Domande, risposte ed
   estratti del manuale non vengono pubblicati nella guida.
+- **Ricollaudo dopo le correzioni, codice `df7469e`: 14/14 casi superati.** Sono le stesse
+  12 domande positive e 2 negative, con criteri più severi: fatti attesi, pagine, citazioni,
+  assenza dei dettagli superflui noti e presenza delle alternative di configurazione.
+  Entrambe le domande negative vengono rifiutate senza fonti estranee. Il nuovo report è
+  `data/evaluations/qara-corrected-2026-10-12.json`; il report iniziale resta conservato.
+  L'esito riguarda questi casi di prova, non tutte le possibili domande.
 - Da completare: avvio automatico, prova dopo riavvio senza rete e scelta del modo più
   comodo di accedere alla pagina dal desktop del Raspberry.
 
-Il prossimo passaggio consigliato è correggere la gestione delle domande senza risposta
-e la selezione delle frasi, poi ripetere il collaudo reale. Le alternative sono ampliare
-ulteriormente le domande oppure predisporre l'avvio automatico locale tenendo espliciti
-i limiti attuali. Dopo le correzioni: avvio automatico e prova senza rete. Miglioramenti
-successivi possono includere selettore dei manuali e gestione delle revisioni.
+Con il ricollaudo confermato, il prossimo passaggio consigliato è l'avvio automatico
+locale seguito dalla prova senza rete dopo un riavvio. Le alternative sono mantenere
+l'avvio manuale oppure aggiungere altre domande e manuali di prova. Miglioramenti successivi
+possono includere selettore dei manuali, gestione delle revisioni e accesso alla guida
+dall'interfaccia locale.
