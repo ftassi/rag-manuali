@@ -281,6 +281,9 @@ def test_grounded_answer_preserves_permission_limits_and_source_mapping() -> Non
     assert _grounded_answer('{"extracts": []}', excerpts) == (
         "Le fonti fornite non contengono questa informazione."
     )
+    assert _grounded_answer('```json\n{"extracts": [2]}\n```', excerpts) == (
+        f"{excerpt} [S1]"
+    )
 
 
 def test_answer_service_never_displays_unverified_model_output(tmp_path: Path) -> None:

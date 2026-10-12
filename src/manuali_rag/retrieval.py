@@ -21,6 +21,9 @@ class Answer:
 
 def _grounded_answer(text: str, excerpts: list[tuple[int, str]]) -> str | None:
     """Il modello seleziona estratti; testo e citazioni provengono dal programma."""
+    text = text.strip()
+    if text.startswith("```") and text.endswith("```"):
+        text = "\n".join(text.splitlines()[1:-1])
     try:
         payload = json.loads(text)
     except (ValueError, TypeError):
@@ -206,7 +209,7 @@ class AnswerService:
         prompt = (
             "COMPITO\n"
             "Copia dalle fonti solo i fatti indispensabili per rispondere direttamente alla "
-            "domanda. Riporta le frasi pertinenti delle fonti senza parafrasarle: conserva "
+            "domanda. Seleziona le frasi pertinenti delle fonti: conserva "
             "nomi dei controlli, condizioni e parole come 'solo'. Puoi omettere frasi intere "
             "non pertinenti, ma non aggiungere passaggi operativi o cambiare il significato. "
             "Se una procedura rimanda a un altro manuale, riporta il rinvio senza inventare "
@@ -224,7 +227,8 @@ class AnswerService:
             "Per ogni parte della domanda scegli la frase F pertinente, compresi condizioni "
             "e limiti. Se la frase richiede un passaggio vicino per essere comprensibile, "
             "seleziona anche quello. Restituisci esclusivamente un oggetto JSON con i numeri "
-            'delle frasi, ad esempio {"extracts": [2, 3]}. '
+            'delle frasi nel campo "extracts" (un array di interi). '
+            f"I numeri validi vanno da 1 a {len(excerpts)}. "
             "Usa da uno a cinque estratti. Non includere testo né numeri S nel JSON. "
             "Copia codici e identificatori per intero, carattere per carattere, inclusi prefissi, "
             "cifre e trattini. "
@@ -246,7 +250,9 @@ class AnswerService:
                 f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
                 "La risposta precedente non contiene estratti verificabili nel formato richiesto. "
                 "Usa solo numeri F presenti nelle FONTI. "
-                'Restituisci esclusivamente {"extracts": [numeri delle frasi pertinenti]}.'
+                f"I numeri validi vanno da 1 a {len(excerpts)}. "
+                f"Correggi questa selezione: {raw}\n"
+                'Restituisci esclusivamente JSON con il campo "extracts" e numeri validi.'
             )
             raw = self.llm.complete(user_text=correction, **output_options)
             text = _grounded_answer(raw, excerpts)
