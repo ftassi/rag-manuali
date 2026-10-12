@@ -240,6 +240,11 @@ class AnswerService:
                     image_paths.append(candidate)
                     seen_images.add(hit.image_path)
 
+        if not excerpts:
+            return Answer(
+                text="Le fonti fornite non contengono questa informazione.", sources=hits
+            )
+
         prompt = (
             "COMPITO\n"
             "Seleziona il minimo numero di frasi F che rispondono direttamente alla domanda. "
