@@ -2,6 +2,7 @@
 
 Per l'uso quotidiano e come promemoria, consulta la **[Guida pratica al RAG](docs/GUIDA_USO.md)**:
 avvio, importazione di nuovi manuali, domande, funzionamento offline e problemi comuni.
+Per riprendere lo sviluppo, consulta il **[punto di ripresa verificato](docs/STATO_LAVORO.md)**.
 
 Prototipo locale per importare manuali PDF o Markdown e porre domande in italiano. Le risposte
 sono prodotte da un modello locale eseguito con Ollama e includono i riferimenti
