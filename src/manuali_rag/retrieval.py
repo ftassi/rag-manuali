@@ -25,14 +25,21 @@ def _source_sentences(excerpt: str) -> list[str]:
         normalized = " ".join(block.split())
         if re.match(r"^(?:Figura|Tabella)\s+\d", normalized, re.IGNORECASE):
             continue
-        sentences.extend(
-            sentence for sentence in re.split(r"(?<=[.!?])\s+", normalized) if sentence
-        )
+        if re.match(r"^\d+(?:\.\d+)+\s+[^.!?]+$", normalized):
+            continue
+        if re.match(r"^\w+\s*[–-]\s*\d+(?:\.\d+)+$", normalized):
+            continue
+        if normalized.startswith("Confidential") and "Record name:" in normalized:
+            continue
+        for item in re.split(r"\s+(?=[•◼➢]|\d+\.\s+[A-Z])", normalized):
+            item = re.sub(r"^\d+\.\s+", "", item)
+            sentences.extend(
+                sentence for sentence in re.split(r"(?<=[.!?])\s+", item) if sentence
+            )
     return sentences
 
 
-def _grounded_answer(text: str, excerpts: list[tuple[int, str]]) -> str | None:
-    """Il modello seleziona estratti; testo e citazioni provengono dal programma."""
+def _selected_indices(text: str, count: int) -> list[int] | None:
     text = text.strip()
     if text.startswith("```") and text.endswith("```"):
         text = "\n".join(text.splitlines()[1:-1])
@@ -43,19 +50,50 @@ def _grounded_answer(text: str, excerpts: list[tuple[int, str]]) -> str | None:
     if not isinstance(payload, dict) or not isinstance(payload.get("extracts"), list):
         return None
     selected = payload["extracts"]
+    if len(selected) > 5:
+        return None
+    for index in selected:
+        if type(index) is not int or not 1 <= index <= count:
+            return None
+    return selected
+
+
+def _complete_list_selection(selected: list[int], excerpts: list[tuple[int, str]]) -> list[int]:
+    """Mantiene il contesto e tutte le alternative di una lista condizionata."""
+    completed = set(selected)
+    for offset, (source, context) in enumerate(excerpts):
+        if not context.endswith(":"):
+            continue
+        children = []
+        for index in range(offset + 1, len(excerpts)):
+            child_source, text = excerpts[index]
+            if child_source != source or not text.startswith(("•", "◼", "➢")):
+                break
+            children.append(index + 1)
+        if not children or not completed.intersection([offset + 1, *children]):
+            continue
+        # Le alternative configurabili e i campi obbligatori non sono scelte esclusive.
+        if "configur" in context.casefold() or "obbligator" in context.casefold():
+            completed.update([offset + 1, *children])
+    return sorted(completed)
+
+
+def _render_excerpts(selected: list[int], excerpts: list[tuple[int, str]]) -> str:
     if not selected:
         return "Le fonti fornite non contengono questa informazione."
-    if not 1 <= len(selected) <= 5:
-        return None
     lines = []
     for index in selected:
-        if type(index) is not int or not 1 <= index <= len(excerpts):
-            return None
         source, value = excerpts[index - 1]
         line = f"{value} [S{source}]"
         if line not in lines:
             lines.append(line)
     return "\n".join(lines)
+
+
+def _grounded_answer(text: str, excerpts: list[tuple[int, str]]) -> str | None:
+    """Il modello seleziona estratti; testo e citazioni provengono dal programma."""
+    selected = _selected_indices(text, len(excerpts))
+    return _render_excerpts(selected, excerpts) if selected is not None else None
 
 
 def _select_answer_sources(hits: list[SearchHit], ambiguity_margin: float) -> list[SearchHit]:
@@ -244,30 +282,32 @@ class AnswerService:
         prompt = (
             f"DOMANDA: {question}\nPASSAGGI:\n"
             + "\n".join(source_blocks)
-            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
-            'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
+            + "\nIndica in requested_info quale informazione viene richiesta, in poche parole. "
+            "Poi scegli in extracts solo le frasi che forniscono proprio quell'informazione, "
+            "non le frasi che citano soltanto lo stesso argomento. "
+            "Se le fonti non contengono la risposta, extracts deve essere vuoto."
         )
         output_options = {
             "image_paths": image_paths,
-            "max_tokens": 80,
+            "max_tokens": 120,
             "response_schema": {
                 "type": "object",
-                "properties": {"extracts": {
+                "properties": {"requested_info": {"type": "string"}, "extracts": {
                     "type": "array",
                     "items": {"type": "integer", "enum": list(range(1, len(excerpts) + 1))},
                     "maxItems": 5,
                 }},
-                "required": ["extracts"],
+                "required": ["requested_info", "extracts"],
                 "additionalProperties": False,
             },
             "system_prompt": (
-                "Seleziona le frasi pertinenti. Restituisci JSON con extracts, "
-                "array di numeri interi."
+                "Identifica l'informazione richiesta e seleziona le frasi che la contengono. "
+                "Restituisci JSON con requested_info ed extracts, array di numeri interi."
             ),
         }
         raw = self.llm.complete(user_text=prompt, **output_options)
-        text = _grounded_answer(raw, excerpts)
-        if text is None:
+        selected = _selected_indices(raw, len(excerpts))
+        if selected is None:
             correction = (
                 f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
                 "La risposta precedente non contiene estratti verificabili nel formato richiesto. "
@@ -277,12 +317,16 @@ class AnswerService:
                 'Restituisci esclusivamente JSON con il campo "extracts" e numeri validi.'
             )
             raw = self.llm.complete(user_text=correction, **output_options)
-            text = _grounded_answer(raw, excerpts)
-        if text is None:
+            selected = _selected_indices(raw, len(excerpts))
+        if selected is None:
             text = (
                 "Non riesco a ricavare una risposta verificabile dalle fonti fornite. "
                 "Consulta le pagine indicate."
             )
+        else:
+            text = _render_excerpts(_complete_list_selection(selected, excerpts), excerpts)
+            if not selected:
+                hits = []
         cited = {int(index) for index in re.findall(r"\[S(\d+)\]", text)}
         if cited:
             source_indices = [index for index in range(1, len(hits) + 1) if index in cited]

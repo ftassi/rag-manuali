@@ -6,6 +6,7 @@ from manuali_rag.embeddings import HashEmbedder
 from manuali_rag.retrieval import (
     AnswerService,
     Retriever,
+    _complete_list_selection,
     _grounded_answer,
     _relevant_excerpt,
     _required_identifier,
@@ -292,6 +293,29 @@ def test_source_sentences_exclude_caption_without_losing_short_instructions() ->
     ) == ["Premere Accedi.", "Selezionare il reparto abilitato."]
 
 
+def test_source_sentences_separate_controls_from_section_heading() -> None:
+    assert _source_sentences(
+        "2.1 Controlli\n\nSono disponibili:\n• Avvia il processo.\n• Annulla le modifiche."
+    ) == ["Sono disponibili:", "• Avvia il processo.", "• Annulla le modifiche."]
+
+
+def test_configurable_list_preserves_both_options_and_context() -> None:
+    excerpts = [
+        (1, "In base alla configurazione il sistema può:"),
+        (1, "• Conservare la sessione."),
+        (1, "• Non conservare la sessione."),
+        (1, "Inviare una notifica al termine."),
+    ]
+    assert _complete_list_selection([2], excerpts) == [1, 2, 3]
+    assert _complete_list_selection([], excerpts) == []
+    assert _complete_list_selection([4], excerpts) == [4]
+
+
+def test_list_completion_does_not_cross_source_boundary() -> None:
+    excerpts = [(1, "In base alla configurazione:"), (2, "• Azione diversa.")]
+    assert _complete_list_selection([1], excerpts) == [1]
+
+
 def test_grounded_answer_preserves_permission_limits_and_source_mapping() -> None:
     excerpt = "Nell’elenco vengono proposti i soli reparti a cui l’utente è abilitato."
     payload = {"extracts": [2]}
@@ -349,3 +373,22 @@ def test_answer_service_omits_unused_source_and_renumbers_citation(tmp_path: Pat
     )
     assert answer.text == "Serrare il dado a 12 Nm. [S1]"
     assert answer.sources == [second]
+
+
+def test_abstention_does_not_show_unrelated_sources(tmp_path: Path) -> None:
+    hit = _hit(1, 0.5)
+    hit.content = "Il filtro predefinito mostra tutte le voci."
+
+    class StaticRetriever:
+        def search(self, *args, **kwargs):
+            return [hit]
+
+    class AbstainingLLM:
+        def complete(self, **kwargs):
+            return '{"requested_info": "credenziale iniziale", "extracts": []}'
+
+    answer = AnswerService(StaticRetriever(), AbstainingLLM(), settings_for(tmp_path)).answer(
+        "Qual è la credenziale iniziale?"
+    )
+    assert answer.text == "Le fonti fornite non contengono questa informazione."
+    assert answer.sources == []
