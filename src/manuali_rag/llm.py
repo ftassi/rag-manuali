@@ -54,6 +54,7 @@ class LLMClient:
         system_prompt: str = SYSTEM_PROMPT,
         max_tokens: int = 350,
         temperature: float = 0.0,
+        response_schema: dict[str, Any] | None = None,
     ) -> str:
         content: list[dict[str, Any]] = [{"type": "text", "text": user_text}]
         for image_path in image_paths or []:
@@ -75,6 +76,10 @@ class LLMClient:
                     "temperature": temperature,
                     "max_tokens": max_tokens,
                     "stream": False,
+                    **({"response_format": {
+                        "type": "json_schema",
+                        "json_schema": {"name": "answer_selection", "schema": response_schema},
+                    }} if response_schema is not None else {}),
                 },
             )
             response.raise_for_status()

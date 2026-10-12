@@ -262,6 +262,16 @@ class AnswerService:
         output_options = {
             "image_paths": image_paths,
             "max_tokens": 80,
+            "response_schema": {
+                "type": "object",
+                "properties": {"extracts": {
+                    "type": "array",
+                    "items": {"type": "integer", "enum": list(range(1, len(excerpts) + 1))},
+                    "maxItems": 5,
+                }},
+                "required": ["extracts"],
+                "additionalProperties": False,
+            },
             "system_prompt": (
                 "Seleziona le frasi del manuale che rispondono alla domanda. "
                 "Restituisci solo JSON con la chiave extracts e un elenco di numeri interi. "

@@ -20,3 +20,7 @@ def test_ollama_openai_compatible_request(tmp_path) -> None:
     assert captured["url"] == "http://127.0.0.1:8080/v1/chat/completions"
     assert captured["payload"]["model"] == "test"
     assert captured["payload"]["stream"] is False
+    schema = {"type": "object", "properties": {"extracts": {"type": "array"}}}
+    LLMClient(settings, client=client).complete(user_text="Seleziona", response_schema=schema)
+    assert captured["payload"]["response_format"]["type"] == "json_schema"
+    assert captured["payload"]["response_format"]["json_schema"]["schema"] == schema

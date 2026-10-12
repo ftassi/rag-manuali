@@ -239,7 +239,7 @@ class RecordingLLM:
         self.user_text = ""
 
     def complete(self, *, user_text: str, image_paths: list[Path], max_tokens: int,
-                 system_prompt: str) -> str:
+                 system_prompt: str, response_schema: dict) -> str:
         self.user_text = user_text
         self.max_tokens = max_tokens
         return json.dumps({"extracts": [1]})
