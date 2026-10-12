@@ -342,7 +342,8 @@ class AnswerService:
         prompt = (
             f"DOMANDA: {question}\nPASSAGGI:\n"
             + "\n".join(f"[F{index}] {excerpts[index - 1][1]}" for index in candidates)
-            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi."
+            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
+            'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
         )
         output_options = {
             "image_paths": image_paths,
