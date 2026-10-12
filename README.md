@@ -1,5 +1,8 @@
 # Manuali RAG
 
+Per l'uso quotidiano e come promemoria, consulta la **[Guida pratica al RAG](docs/GUIDA_USO.md)**:
+avvio, importazione di nuovi manuali, domande, funzionamento offline e problemi comuni.
+
 Prototipo locale per importare manuali PDF o Markdown e porre domande in italiano. Le risposte
 sono prodotte da un modello locale eseguito con Ollama e includono i riferimenti
 al manuale e alla pagina.
