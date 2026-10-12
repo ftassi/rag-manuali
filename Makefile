@@ -21,8 +21,9 @@ HTTP_SMOKE_OUTPUT ?= benchmark-results/http-smoke.json
 UI_SMOKE_OUTPUT ?= benchmark-results/ui-smoke.json
 UI_SMOKE_SCREENSHOT ?= benchmark-results/ui-smoke.png
 REGRESSION_DIR ?= benchmark-results/regression
+MANUAL_EVAL_OUTPUT ?= data/evaluations/manual-eval.json
 
-.PHONY: help init ollama-check benchmark rag-eval embedding-eval hybrid-eval e2e-eval ingestion-eval smoke-http smoke-ui regression regression-check start start-dev serve test lint check format ingest search ask documents health
+.PHONY: help init ollama-check benchmark rag-eval embedding-eval hybrid-eval e2e-eval manual-eval ingestion-eval smoke-http smoke-ui regression regression-check start start-dev serve test lint check format ingest search ask documents health
 
 help: ## Mostra i comandi disponibili
 	@awk 'BEGIN {FS = ":.*## "; printf "Uso: make <target>\n\n"} /^[a-zA-Z_-]+:.*## / {printf "  %-12s %s\n", $$1, $$2}' $(MAKEFILE_LIST)
@@ -69,6 +70,10 @@ ingestion-eval: ## Prova importazione, ricerca e risposta su un Markdown sinteti
 	@test -x "$(BIN)/python" || { echo "Ambiente non inizializzato: esegui make init"; exit 1; }
 	@mkdir -p "$(dir $(INGESTION_EVAL_OUTPUT))"
 	@"$(BIN)/python" scripts/evaluate_ingestion.py --output "$(INGESTION_EVAL_OUTPUT)"
+
+manual-eval: ## Collauda un manuale con domande private: CASES=percorso.json
+	@test -n "$(CASES)" || { echo "Uso: make manual-eval CASES=percorso.json"; exit 1; }
+	@"$(BIN)/python" scripts/evaluate_manual_cases.py --cases "$(CASES)" --output "$(MANUAL_EVAL_OUTPUT)"
 
 smoke-http: ## Prova API HTTP, upload e domanda con dati sintetici temporanei
 	@test -x "$(BIN)/python" || { echo "Ambiente non inizializzato: esegui make init"; exit 1; }
