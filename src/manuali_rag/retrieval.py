@@ -208,20 +208,13 @@ class AnswerService:
 
         prompt = (
             "COMPITO\n"
-            "Copia dalle fonti solo i fatti indispensabili per rispondere direttamente alla "
-            "domanda. Seleziona le frasi pertinenti delle fonti: conserva "
-            "nomi dei controlli, condizioni e parole come 'solo'. Puoi omettere frasi intere "
-            "non pertinenti, ma non aggiungere passaggi operativi o cambiare il significato. "
-            "Se una procedura rimanda a un altro manuale, riporta il rinvio senza inventare "
-            "i passaggi mancanti. Ometti gli argomenti vicini ma "
-            "non pertinenti. Non aggiungere spiegazioni, motivazioni, scopi, cause, conseguenze, "
-            "consigli o conoscenze generali, anche se plausibili. Non colmare parti confuse o "
-            "mancanti. Prima di rispondere individua in silenzio la frase esatta che risponde alla "
-            "domanda e controllane le negazioni. Se la domanda chiede quando o in quale stato "
-            "un'operazione può essere eseguita, uno stato per cui la fonte dice 'non può' deve "
-            "essere escluso dalla risposta: cerca invece l'istruzione positiva esplicita. "
-            "Conserva esattamente coppie opposte come attivo/inattivo o consentito/vietato e non "
-            "trasformare 'non può' in 'può'.\n\n"
+            "Seleziona il minimo numero di frasi F che rispondono direttamente alla domanda. "
+            "Se una sola frase contiene la risposta completa, seleziona solo quella. "
+            "Non selezionare tutte le frasi: escludi argomenti vicini, titoli e didascalie. "
+            "Copri tutte le parti della domanda, comprese condizioni e limitazioni. "
+            "Rispetta le negazioni: per sapere in quale stato si può eseguire un'operazione "
+            "cerca l'istruzione positiva e non uno stato vietato. "
+            "Se il dettaglio richiesto è in un altro manuale, seleziona la frase di rinvio.\n\n"
             f"DOMANDA\n{question}\n\n"
             "FONTI\n" + "\n\n".join(source_blocks) + "\n\nVINCOLI DI USCITA\n"
             "Per ogni parte della domanda scegli la frase F pertinente, compresi condizioni "
@@ -230,8 +223,6 @@ class AnswerService:
             'delle frasi nel campo "extracts" (un array di interi). '
             f"I numeri validi vanno da 1 a {len(excerpts)}. "
             "Usa da uno a cinque estratti. Non includere testo né numeri S nel JSON. "
-            "Copia codici e identificatori per intero, carattere per carattere, inclusi prefissi, "
-            "cifre e trattini. "
             'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
         )
         output_options = {
