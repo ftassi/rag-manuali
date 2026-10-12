@@ -26,7 +26,8 @@ def _select_answer_sources(hits: list[SearchHit], ambiguity_margin: float) -> li
     if (
         first_score is not None
         and second_score is not None
-        and first_score - second_score <= ambiguity_margin
+        and abs(first_score - second_score) <= ambiguity_margin
+        and hits[1].score >= hits[0].score * (1 - ambiguity_margin)
     ):
         return hits[:2]
     return hits[:1]
@@ -146,7 +147,7 @@ class AnswerService:
             )
 
         # Una sola fonte riduce la contaminazione. Manteniamo anche la seconda soltanto quando
-        # la similarità semantica è quasi equivalente e il ranking è quindi realmente ambiguo.
+        # entrambi i punteggi (semantico e ibrido) sono quasi equivalenti.
         hits = _select_answer_sources(hits, self.settings.answer_ambiguity_margin)
 
         source_blocks: list[str] = []
@@ -172,7 +173,11 @@ class AnswerService:
         prompt = (
             "COMPITO\n"
             "Copia dalle fonti solo i fatti indispensabili per rispondere direttamente alla "
-            "domanda e riformulali nel minimo numero di parole. Ometti gli argomenti vicini ma "
+            "domanda. Riporta le frasi pertinenti delle fonti senza parafrasarle: conserva "
+            "nomi dei controlli, condizioni e parole come 'solo'. Puoi omettere frasi intere "
+            "non pertinenti, ma non aggiungere passaggi operativi o cambiare il significato. "
+            "Se una procedura rimanda a un altro manuale, riporta il rinvio senza inventare "
+            "i passaggi mancanti. Ometti gli argomenti vicini ma "
             "non pertinenti. Non aggiungere spiegazioni, motivazioni, scopi, cause, conseguenze, "
             "consigli o conoscenze generali, anche se plausibili. Non colmare parti confuse o "
             "mancanti. Prima di rispondere individua in silenzio la frase esatta che risponde alla "
@@ -186,9 +191,10 @@ class AnswerService:
             "Rispondi in italiano con una sola frase breve, oppure con al massimo cinque punti "
             "solo se la domanda richiede più elementi. Termina ogni frase o punto con almeno una "
             "citazione nel formato esatto [S1], [S2], ecc. Non sostituire le citazioni con titoli "
-            "o numeri di pagina. Se le fonti non contengono la risposta, scrivi soltanto: "
+            "o numeri di pagina. "
             "Copia codici e identificatori per intero, carattere per carattere, inclusi prefissi, "
             "cifre e trattini. "
+            'Se le fonti non contengono la risposta, scrivi soltanto: '
             '"Le fonti fornite non contengono questa informazione."'
         )
         text = self.llm.complete(user_text=prompt, image_paths=image_paths, max_tokens=160)

@@ -168,6 +168,18 @@ def test_answer_sources_keep_two_when_semantically_ambiguous() -> None:
     assert _select_answer_sources(hits, 0.02) == hits[:2]
 
 
+def test_answer_sources_respect_clear_hybrid_winner() -> None:
+    hits = [_hit(1, 0.33), _hit(2, 0.34)]
+    hits[0].score = 0.045
+    hits[1].score = 0.030
+    assert _select_answer_sources(hits, 0.02) == hits[:1]
+
+
+def test_answer_sources_do_not_treat_reversed_semantic_gap_as_tie() -> None:
+    hits = [_hit(1, 0.20), _hit(2, 0.50)]
+    assert _select_answer_sources(hits, 0.02) == hits[:1]
+
+
 def test_relevant_excerpt_preserves_negation_and_opposite_state() -> None:
     content = """Associazione dell'agenda
 

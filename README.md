@@ -16,6 +16,23 @@ al manuale e alla pagina.
 - API FastAPI, CLI e interfaccia web minimale;
 - funzionamento interamente locale, senza API cloud.
 
+## Obiettivo e utilizzo offline sul Raspberry
+
+Il sistema finale deve permettere di importare manuali, scrivere domande e leggere risposte
+direttamente sul Raspberry, anche senza connessione Internet. Nel browser del Raspberry
+aprire `http://127.0.0.1:8000` quando il servizio è avviato. L'interfaccia non carica librerie,
+font o altri contenuti da servizi esterni.
+
+Manuali, pagine estratte e indice restano nella cartella locale `data/`, esclusa da Git;
+Ollama esegue generazione ed embedding localmente. Gli endpoint dei modelli devono restare
+configurati su `http://127.0.0.1:11434/v1`. GitHub serve per sincronizzare il codice durante
+lo sviluppo; non è necessario durante l'uso. Installazione delle dipendenze e download
+dei modelli richiedono una connessione iniziale.
+
+Il collaudo finale deve includere un riavvio e una prova senza rete: apertura dell'interfaccia,
+domanda su un manuale già indicizzato, consultazione della pagina citata e importazione
+di un nuovo file locale. Questa verifica è distinta dai test automatici su dati sintetici.
+
 ## Requisiti
 
 - Python 3.11 o successivo;
@@ -159,8 +176,9 @@ modificati con `MANUALI_RETRIEVAL_SEMANTIC_WEIGHT`, `MANUALI_RETRIEVAL_LEXICAL_W
 `MANUALI_RETRIEVAL_RRF_K`.
 
 Per limitare la contaminazione, la generazione usa normalmente la prima fonte e include la
-seconda solo quando la differenza di similarità è al massimo
-`MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02`.
+seconda solo quando la differenza assoluta di similarità è al massimo
+`MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02` e il punteggio ibrido della seconda dista
+al massimo del 2% da quello della prima (con il margine predefinito).
 
 Per valutare insieme retrieval, risposta e citazioni senza limitare la ricerca a un documento:
 
