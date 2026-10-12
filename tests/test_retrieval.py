@@ -328,3 +328,24 @@ def test_answer_service_never_displays_unverified_model_output(tmp_path: Path) -
     assert "Disattivare" not in answer.text
     assert "Non riesco" in answer.text
     assert answer.sources == [hit]
+
+
+def test_answer_service_omits_unused_source_and_renumbers_citation(tmp_path: Path) -> None:
+    first = _hit(1, 0.50)
+    first.content = "Applicare grasso sulle guarnizioni."
+    second = _hit(2, 0.49)
+    second.content = "Serrare il dado a 12 Nm."
+
+    class StaticRetriever:
+        def search(self, *args, **kwargs):
+            return [first, second]
+
+    class SelectingLLM:
+        def complete(self, **kwargs):
+            return '{"extracts": [2]}'
+
+    answer = AnswerService(StaticRetriever(), SelectingLLM(), settings_for(tmp_path)).answer(
+        "Quale coppia di serraggio va applicata?"
+    )
+    assert answer.text == "Serrare il dado a 12 Nm. [S1]"
+    assert answer.sources == [second]

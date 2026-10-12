@@ -219,16 +219,12 @@ class AnswerService:
         image_paths: list[Path] = []
         seen_images: set[str] = set()
         for index, hit in enumerate(hits, start=1):
-            page = f"pagina {hit.page}" if hit.page else "pagina non specificata"
             excerpt = _relevant_excerpt(hit.content, question)
             numbered: list[str] = []
             for sentence in _source_sentences(excerpt):
                 excerpts.append((index, sentence))
                 numbered.append(f"[F{len(excerpts)}] {sentence}")
-            source_blocks.append(
-                f"[S{index}] Manuale: {hit.manual_title}; {page}; sezione: {hit.section}\n"
-                + "\n".join(numbered)
-            )
+            source_blocks.append("\n".join(numbered))
             if (
                 include_images
                 and hit.image_path
@@ -246,22 +242,9 @@ class AnswerService:
             )
 
         prompt = (
-            "COMPITO\n"
-            "Seleziona il minimo numero di frasi F che rispondono direttamente alla domanda. "
-            "Se una sola frase contiene la risposta completa, seleziona solo quella. "
-            "Non selezionare tutte le frasi: escludi argomenti vicini, titoli e didascalie. "
-            "Copri tutte le parti della domanda, comprese condizioni e limitazioni. "
-            "Rispetta le negazioni: per sapere in quale stato si può eseguire un'operazione "
-            "cerca l'istruzione positiva e non uno stato vietato. "
-            "Se il dettaglio richiesto è in un altro manuale, seleziona la frase di rinvio.\n\n"
-            f"DOMANDA\n{question}\n\n"
-            "FONTI\n" + "\n\n".join(source_blocks) + "\n\nVINCOLI DI USCITA\n"
-            "Per ogni parte della domanda scegli la frase F pertinente, compresi condizioni "
-            "e limiti. Se la frase richiede un passaggio vicino per essere comprensibile, "
-            "seleziona anche quello. Restituisci esclusivamente un oggetto JSON con i numeri "
-            'delle frasi nel campo "extracts" (un array di interi). '
-            f"I numeri validi vanno da 1 a {len(excerpts)}. "
-            "Usa da uno a cinque estratti. Non includere testo né numeri S nel JSON. "
+            f"DOMANDA: {question}\nPASSAGGI:\n"
+            + "\n".join(source_blocks)
+            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
             'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
         )
         output_options = {
@@ -278,9 +261,8 @@ class AnswerService:
                 "additionalProperties": False,
             },
             "system_prompt": (
-                "Seleziona le frasi del manuale che rispondono alla domanda. "
-                "Restituisci solo JSON con la chiave extracts e un elenco di numeri interi. "
-                "Non aggiungere spiegazioni."
+                "Seleziona le frasi pertinenti. Restituisci JSON con extracts, "
+                "array di numeri interi."
             ),
         }
         raw = self.llm.complete(user_text=prompt, **output_options)
@@ -301,4 +283,14 @@ class AnswerService:
                 "Non riesco a ricavare una risposta verificabile dalle fonti fornite. "
                 "Consulta le pagine indicate."
             )
+        cited = {int(index) for index in re.findall(r"\[S(\d+)\]", text)}
+        if cited:
+            source_indices = [index for index in range(1, len(hits) + 1) if index in cited]
+            mapping = {old: new for new, old in enumerate(source_indices, start=1)}
+            text = re.sub(
+                r"\[S(\d+)\]",
+                lambda match: f"[S{mapping[int(match.group(1))]}]",
+                text,
+            )
+            hits = [hits[index - 1] for index in source_indices]
         return Answer(text=text, sources=hits)
