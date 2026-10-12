@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -16,6 +17,36 @@ IDENTIFIER_RE = re.compile(r"\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[
 class Answer:
     text: str
     sources: list[SearchHit]
+
+
+def _grounded_answer(text: str, excerpts: list[str]) -> str | None:
+    """Accetta solo estratti copiati dalle fonti, senza passaggi generati."""
+    try:
+        payload = json.loads(text)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict) or not isinstance(payload.get("quotes"), list):
+        return None
+    quotes = payload["quotes"]
+    if not quotes:
+        return "Le fonti fornite non contengono questa informazione."
+    if not 1 <= len(quotes) <= 5:
+        return None
+    lines = []
+    for quote in quotes:
+        if not isinstance(quote, dict):
+            return None
+        source = quote.get("source")
+        value = quote.get("text")
+        if type(source) is not int or not 1 <= source <= len(excerpts):
+            return None
+        if not isinstance(value, str) or not value.strip():
+            return None
+        normalized = " ".join(value.split())
+        if normalized not in " ".join(excerpts[source - 1].split()):
+            return None
+        lines.append(f"{normalized} [S{source}]")
+    return "\n".join(lines)
 
 
 def _select_answer_sources(hits: list[SearchHit], ambiguity_margin: float) -> list[SearchHit]:
@@ -151,13 +182,16 @@ class AnswerService:
         hits = _select_answer_sources(hits, self.settings.answer_ambiguity_margin)
 
         source_blocks: list[str] = []
+        excerpts: list[str] = []
         image_paths: list[Path] = []
         seen_images: set[str] = set()
         for index, hit in enumerate(hits, start=1):
             page = f"pagina {hit.page}" if hit.page else "pagina non specificata"
+            excerpt = _relevant_excerpt(hit.content, question)
+            excerpts.append(excerpt)
             source_blocks.append(
                 f"[S{index}] Manuale: {hit.manual_title}; {page}; sezione: {hit.section}\n"
-                f"{_relevant_excerpt(hit.content, question)}"
+                f"{excerpt}"
             )
             if (
                 include_images
@@ -188,23 +222,28 @@ class AnswerService:
             "trasformare 'non può' in 'può'.\n\n"
             f"DOMANDA\n{question}\n\n"
             "FONTI\n" + "\n\n".join(source_blocks) + "\n\nVINCOLI DI USCITA\n"
-            "Rispondi in italiano con una sola frase breve, oppure con al massimo cinque punti "
-            "solo se la domanda richiede più elementi. Termina ogni frase o punto con almeno una "
-            "citazione nel formato esatto [S1], [S2], ecc. Non sostituire le citazioni con titoli "
-            "o numeri di pagina. "
+            "Per ogni parte della domanda scegli una frase completa della fonte, compresi "
+            "condizioni e limiti. Non riscrivere le frasi. Restituisci esclusivamente un oggetto "
+            'JSON nel formato {"quotes": [{"source": 1, "text": "frase copiata dalla fonte"}]}. '
+            "Usa da uno a cinque estratti. Il numero source identifica S1, S2, ecc. "
             "Copia codici e identificatori per intero, carattere per carattere, inclusi prefissi, "
             "cifre e trattini. "
-            'Se le fonti non contengono la risposta, scrivi soltanto: '
-            '"Le fonti fornite non contengono questa informazione."'
+            'Se le fonti non contengono la risposta, restituisci {"quotes": []}.'
         )
-        text = self.llm.complete(user_text=prompt, image_paths=image_paths, max_tokens=160)
-        missing_identifier = _required_identifier(question, hits, text)
-        if missing_identifier:
+        raw = self.llm.complete(user_text=prompt, image_paths=image_paths, max_tokens=350)
+        text = _grounded_answer(raw, excerpts)
+        if text is None:
             correction = (
                 f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
-                f"La fonte contiene l'identificatore esatto {missing_identifier}. La risposta "
-                "precedente lo ha omesso o troncato. Rispondi di nuovo copiandolo integralmente, "
-                "carattere per carattere, e mantieni la citazione."
+                "La risposta precedente non contiene estratti verificabili nel formato richiesto. "
+                "Copia solo frasi presenti nelle FONTI, carattere per carattere, senza aggiunte. "
+                "Restituisci esclusivamente il JSON richiesto."
             )
-            text = self.llm.complete(user_text=correction, image_paths=image_paths, max_tokens=160)
+            raw = self.llm.complete(user_text=correction, image_paths=image_paths, max_tokens=350)
+            text = _grounded_answer(raw, excerpts)
+        if text is None:
+            text = (
+                "Non riesco a ricavare una risposta verificabile dalle fonti fornite. "
+                "Consulta le pagine indicate."
+            )
         return Answer(text=text, sources=hits)

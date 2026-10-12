@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 from manuali_rag.config import Settings
@@ -5,6 +6,7 @@ from manuali_rag.embeddings import HashEmbedder
 from manuali_rag.retrieval import (
     AnswerService,
     Retriever,
+    _grounded_answer,
     _relevant_excerpt,
     _required_identifier,
     _select_answer_sources,
@@ -224,7 +226,10 @@ class RecordingLLM:
     def complete(self, *, user_text: str, image_paths: list[Path], max_tokens: int) -> str:
         self.user_text = user_text
         self.max_tokens = max_tokens
-        return "La pressione è insufficiente [S1]."
+        return json.dumps({"quotes": [{
+            "source": 1,
+            "text": "L'errore E104 indica una pressione insufficiente nel circuito.",
+        }]})
 
 
 def test_answer_prompt_requires_supported_concise_answer(tmp_path: Path) -> None:
@@ -254,11 +259,46 @@ def test_answer_prompt_requires_supported_concise_answer(tmp_path: Path) -> None
         "Cosa significa E104?", top_k=1
     )
 
-    assert answer.text == "La pressione è insufficiente [S1]."
-    assert "Ometti gli argomenti vicini ma non pertinenti" in llm.user_text
-    assert "Non aggiungere spiegazioni, motivazioni" in llm.user_text
-    assert "uno stato per cui la fonte dice 'non può' deve essere escluso" in llm.user_text
-    assert "non trasformare 'non può' in 'può'" in llm.user_text
-    assert "Termina ogni frase o punto" in llm.user_text
-    assert "[S1] Manuale: Manuale caldaia; pagina 7" in llm.user_text
-    assert llm.max_tokens == 160
+    assert answer.text == "L'errore E104 indica una pressione insufficiente nel circuito. [S1]"
+    assert answer.sources[0].page == 7
+
+
+def test_grounded_answer_rejects_invented_procedure_and_invalid_citation() -> None:
+    excerpts = ["Cliccare su Accesso temporaneo. Per i dettagli consultare il manuale dedicato."]
+    invented = {"quotes": [{"source": 1, "text": "Selezionare il reparto desiderato."}]}
+    assert _grounded_answer(json.dumps(invented), excerpts) is None
+    wrong_source = {"quotes": [{"source": 2, "text": "Cliccare su Accesso temporaneo."}]}
+    assert _grounded_answer(json.dumps(wrong_source), excerpts) is None
+
+
+def test_grounded_answer_preserves_permission_limits_and_normalizes_line_wraps() -> None:
+    excerpt = "Nell’elenco vengono proposti i soli reparti\na cui l’utente è abilitato."
+    payload = {"quotes": [{"source": 1, "text": excerpt.replace("\n", " ")}]}
+    assert _grounded_answer(json.dumps(payload), [excerpt]) == (
+        "Nell’elenco vengono proposti i soli reparti a cui l’utente è abilitato. [S1]"
+    )
+    payload["quotes"][0]["text"] = "Nell’elenco vengono proposti i reparti."
+    assert _grounded_answer(json.dumps(payload), [excerpt]) is None
+
+
+def test_answer_service_never_displays_unverified_model_output(tmp_path: Path) -> None:
+    hit = _hit(1, 0.5)
+    hit.content = "Premere il pulsante di accesso."
+
+    class StaticRetriever:
+        def search(self, *args, **kwargs):
+            return [hit]
+
+    class InventingLLM:
+        calls = 0
+
+        def complete(self, **kwargs):
+            self.calls += 1
+            return json.dumps({"quotes": [{"source": 1, "text": "Disattivare i controlli."}]})
+
+    llm = InventingLLM()
+    answer = AnswerService(StaticRetriever(), llm, settings_for(tmp_path)).answer("Come accedo?")
+    assert llm.calls == 2
+    assert "Disattivare" not in answer.text
+    assert "Non riesco" in answer.text
+    assert answer.sources == [hit]
