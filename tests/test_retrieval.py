@@ -13,6 +13,7 @@ from manuali_rag.retrieval import (
     _relevant_excerpt,
     _required_identifier,
     _select_answer_sources,
+    _semantic_selection,
     _source_sentences,
     _strong_lexical_match,
 )
@@ -334,6 +335,45 @@ def test_candidate_shortlist_keeps_relevant_fact_among_menu_labels() -> None:
     selected = _candidate_indices("Per quale periodo sono modificabili le note?", excerpts)
     assert len(selected) == 8
     assert 21 in selected
+
+
+def test_semantic_selection_uses_only_the_clear_answer() -> None:
+    excerpts = [(1, "Solo gli utenti autorizzati vedono il comando."), (1, "Premere Conferma.")]
+    assert _semantic_selection("Chi vede il comando?", excerpts, [0.85, 0.65], 0.5) == [1]
+
+
+def test_semantic_selection_keeps_multiple_requested_facts() -> None:
+    excerpts = [(1, "Selezionare il profilo."), (1, "Le opzioni sono nelle impostazioni.")]
+    assert _semantic_selection(
+        "Quale profilo selezionare e dove sono le opzioni?", excerpts, [0.75, 0.70], 0.5
+    ) == [1, 2]
+
+
+def test_required_fields_do_not_select_the_upload_procedure() -> None:
+    excerpts = [
+        (1, "Caricare il file con il pulsante Sfoglia."),
+        (1, "I campi obbligatori sono:"),
+        (1, "• Nome."),
+        (1, "• Categoria."),
+    ]
+    selected = _semantic_selection(
+        "Quali campi sono obbligatori per il caricamento?", excerpts, [0.8, 0.4, 0.3, 0.3], 0.5
+    )
+    assert _complete_list_selection(selected, excerpts) == [2, 3, 4]
+
+
+def test_uncertain_semantics_defers_and_unrelated_semantics_abstains() -> None:
+    excerpts = [(1, "Una frase tecnica.")]
+    assert _semantic_selection("Domanda parafrasata?", excerpts, [0.3], 0.5) is None
+    assert _semantic_selection("Domanda su altro argomento?", excerpts, [0.1], 0.5) == []
+
+
+def test_state_question_keeps_positive_instruction_when_negative_is_top_ranked() -> None:
+    excerpts = [(1, "In stato Aperto non può essere archiviato."),
+                (1, "Per archiviare portare il registro in stato Chiuso.")]
+    assert _semantic_selection(
+        "In quale stato può essere archiviato?", excerpts, [0.7, 0.6], 0.5
+    ) == [1, 2]
 
 
 def test_grounded_answer_preserves_permission_limits_and_source_mapping() -> None:

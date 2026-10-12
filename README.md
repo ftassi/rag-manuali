@@ -15,7 +15,7 @@ al manuale e alla pagina.
 - importazione Markdown con commenti di pagina;
 - chunking per pagina e conservazione dei metadati;
 - indice ibrido SQLite FTS5 + embedding;
-- risposte testuali con `llama3.2:3b` tramite l'API locale di Ollama;
+- risposte estrattive con embedding locali e `llama3.2:3b` per i casi ambigui, tramite Ollama;
 - API FastAPI, CLI e interfaccia web minimale;
 - funzionamento interamente locale, senza API cloud.
 
@@ -183,12 +183,28 @@ seconda solo quando la differenza assoluta di similarità è al massimo
 `MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02` e il punteggio ibrido della seconda dista
 al massimo del 2% da quello della prima (con il margine predefinito).
 
-Le risposte riportano estratti delle fonti: il modello seleziona frasi numerate e il programma
-mostra il loro testo originale con la citazione corrispondente. Se il modello
+Le risposte riportano estratti delle fonti. Il programma confronta la domanda con le singole
+frasi tramite gli embedding locali e seleziona i casi sufficientemente simili; nei casi ambigui
+`llama3.2:3b` seleziona frasi numerate. Il programma mostra sempre testo originale e citazione.
+La soglia della selezione diretta è `MANUALI_ANSWER_UNIT_MIN_SIMILARITY=0.50`, verificata con
+`nomic-embed-text-v2-moe`; cambiare modello richiede un nuovo collaudo. Le alternative di una
+lista configurabile e i campi di una lista obbligatoria vengono conservati insieme al contesto.
+Se il modello
 restituisce una selezione non valida, il sistema richiede una correzione; se anche questa non è
 verificabile, mostra un messaggio di mancata verifica e le pagine da consultare.
 Questo controllo impedisce testo aggiunto, ma non garantisce che il modello scelga tutti
 i passaggi necessari o interpreti correttamente quale risponde alla domanda.
+
+Per ripetere un collaudo su manuali reali con domande e criteri privati:
+
+```bash
+make manual-eval CASES=./data/evaluations/casi.json
+```
+
+Il JSON deve contenere un elenco `cases` con `id`, `question`, `expected_pdf_pages`,
+`required_terms` e, se necessario, `forbidden_terms` o `expect_abstention`.
+I report vengono salvati in `data/evaluations/`, fuori da Git. Non pubblicare questi file:
+possono contenere estratti dei manuali. Il comando termina con errore se un caso non passa.
 
 Per valutare insieme retrieval, risposta e citazioni senza limitare la ricerca a un documento:
 

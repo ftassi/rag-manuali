@@ -47,6 +47,7 @@ class Settings:
     retrieval_rrf_k: int
     answer_ambiguity_margin: float
     default_top_k: int
+    answer_unit_min_similarity: float = 0.50
 
     @classmethod
     def from_env(cls) -> Settings:
@@ -85,6 +86,7 @@ class Settings:
             retrieval_rrf_k=_int("MANUALI_RETRIEVAL_RRF_K", 60),
             answer_ambiguity_margin=_float("MANUALI_ANSWER_AMBIGUITY_MARGIN", 0.02),
             default_top_k=_int("MANUALI_DEFAULT_TOP_K", 5),
+            answer_unit_min_similarity=_float("MANUALI_ANSWER_UNIT_MIN_SIMILARITY", 0.50),
         )
 
     def ensure_directories(self) -> None:

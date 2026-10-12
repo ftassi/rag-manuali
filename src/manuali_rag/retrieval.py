@@ -97,6 +97,50 @@ def _candidate_indices(question: str, excerpts: list[tuple[int, str]], limit: in
     return sorted(ranked[:limit])
 
 
+def _semantic_selection(
+    question: str,
+    excerpts: list[tuple[int, str]],
+    scores: list[float],
+    minimum: float,
+) -> list[int] | None:
+    ranked = sorted(range(len(scores)), key=lambda index: (-scores[index], index))
+    if not ranked:
+        return []
+    # Una richiesta di campi obbligatori deve scegliere la lista, non le istruzioni di upload.
+    if re.search(r"\b(?:campi|dati)\b", question, re.IGNORECASE) and re.search(
+        r"obbligator", question, re.IGNORECASE
+    ):
+        lists = [
+            index for index in ranked
+            if excerpts[index][1].endswith(":")
+            and re.search(r"obbligator", excerpts[index][1], re.IGNORECASE)
+        ]
+        if lists and scores[lists[0]] >= 0.20:
+            return [lists[0] + 1]
+    best = ranked[0]
+    if scores[best] < 0.20:
+        return []
+    if scores[best] < minimum:
+        return None
+    selected = [best + 1]
+    parts = min(5, 1 + len(re.findall(
+        r"\be\s+(?:quali?|dove|come|cosa|quando|chi)\b", question, re.IGNORECASE
+    )))
+    for index in ranked[1:parts]:
+        if scores[index] >= max(minimum, scores[best] * 0.80):
+            selected.append(index + 1)
+    if "stato" in question.casefold() and re.search(
+        r"non\s+(?:può|puo|possono)", excerpts[best][1], re.IGNORECASE
+    ):
+        for index in ranked[1:]:
+            text = excerpts[index][1]
+            if "stato" in text.casefold() and not re.search(r"\bnon\b", text, re.IGNORECASE):
+                if scores[index] >= scores[best] - 0.15:
+                    selected.append(index + 1)
+                break
+    return selected
+
+
 def _render_excerpts(selected: list[int], excerpts: list[tuple[int, str]]) -> str:
     if not selected:
         return "Le fonti fornite non contengono questa informazione."
@@ -298,8 +342,7 @@ class AnswerService:
         prompt = (
             f"DOMANDA: {question}\nPASSAGGI:\n"
             + "\n".join(f"[F{index}] {excerpts[index - 1][1]}" for index in candidates)
-            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
-            "Se le fonti non contengono la risposta, extracts deve essere vuoto."
+            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi."
         )
         output_options = {
             "image_paths": image_paths,
@@ -319,19 +362,34 @@ class AnswerService:
                 "array di numeri interi."
             ),
         }
-        raw = self.llm.complete(user_text=prompt, **output_options)
-        selected = _selected_indices(raw, len(excerpts))
+        selected = None
+        if self.settings.embedding_provider == "openai" and not image_paths:
+            vectors = self.retriever.embedder.embed([question, *[text for _, text in excerpts]])
+            scores = [
+                sum(a * b for a, b in zip(vectors[0], vector, strict=True))
+                for vector in vectors[1:]
+            ]
+            selected = _semantic_selection(
+                question, excerpts, scores, self.settings.answer_unit_min_similarity
+            )
+        if selected is None:
+            raw = self.llm.complete(user_text=prompt, **output_options)
+            selected = _selected_indices(raw, len(excerpts))
+            if selected is not None and any(index not in candidates for index in selected):
+                selected = None
         if selected is None:
             correction = (
                 f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
                 "La risposta precedente non contiene estratti verificabili nel formato richiesto. "
                 "Usa solo numeri F presenti nelle FONTI. "
-                f"I numeri validi vanno da 1 a {len(excerpts)}. "
+                f"I numeri validi sono: {candidates}. "
                 f"Correggi questa selezione: {raw}\n"
                 'Restituisci esclusivamente JSON con il campo "extracts" e numeri validi.'
             )
             raw = self.llm.complete(user_text=correction, **output_options)
             selected = _selected_indices(raw, len(excerpts))
+            if selected is not None and any(index not in candidates for index in selected):
+                selected = None
         if selected is None:
             text = (
                 "Non riesco a ricavare una risposta verificabile dalle fonti fornite. "
