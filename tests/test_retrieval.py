@@ -11,6 +11,7 @@ from manuali_rag.retrieval import (
     _required_identifier,
     _select_answer_sources,
     _source_sentences,
+    _strong_lexical_match,
 )
 from manuali_rag.store import ChunkInput, SearchHit, Store
 
@@ -164,6 +165,19 @@ def _hit(chunk_id: int, semantic_score: float) -> SearchHit:
 def test_answer_sources_keep_only_clear_winner() -> None:
     hits = [_hit(1, 0.50), _hit(2, 0.30), _hit(3, 0.29)]
     assert _select_answer_sources(hits, 0.02) == hits[:1]
+
+
+def test_lexical_match_requires_more_than_a_shared_generic_verb() -> None:
+    assert not _strong_lexical_match(
+        "Quale forza di rotazione va applicata al fissaggio?",
+        "Applicare grasso al silicone sulle guarnizioni una volta all'anno.",
+    )
+    assert _strong_lexical_match(
+        "Cosa selezionare dopo un'autenticazione riuscita?",
+        "Dopo un'autenticazione riuscita selezionare il reparto abilitato.",
+    )
+    assert _strong_lexical_match("Cosa significa e104?", "Il codice E104 indica bassa pressione.")
+    assert _strong_lexical_match("Filtro", "Pulire il filtro ogni sei mesi.")
 
 
 def test_answer_sources_keep_two_when_semantically_ambiguous() -> None:

@@ -86,6 +86,24 @@ def _term_features(text: str) -> set[str]:
     return features
 
 
+def _strong_lexical_match(question: str, content: str) -> bool:
+    identifiers = set(IDENTIFIER_RE.findall(question.upper()))
+    if identifiers & set(IDENTIFIER_RE.findall(content.upper())):
+        return True
+
+    def roots(text: str) -> set[str]:
+        return {
+            token[:5] if token.isalpha() and len(token) >= 6 else token
+            for token in FTS_TOKEN_RE.findall(text.casefold())
+            if token not in FTS_STOPWORDS and len(token) > 2
+        }
+
+    question_roots = roots(question)
+    return bool(question_roots) and len(question_roots & roots(content)) >= min(
+        2, len(question_roots)
+    )
+
+
 def _relevant_excerpt(content: str, question: str, max_blocks: int = 3) -> str:
     blocks = [block.strip() for block in content.split("\n\n") if block.strip()]
     if len(blocks) <= max_blocks:
@@ -132,6 +150,12 @@ class Retriever:
         top_k = top_k or self.settings.default_top_k
         candidate_limit = max(self.settings.retrieval_candidates, top_k)
         lexical = self.store.lexical_candidates(question, candidate_limit, document_id)
+        # Un singolo verbo generico non deve prevalere sulla ricerca semantica.
+        lexical = [
+            hit.chunk_id
+            for hit in self.store.get_hits([(chunk_id, 0.0) for chunk_id in lexical])
+            if _strong_lexical_match(question, hit.content)
+        ]
         query_vector = self.embedder.embed([question])[0]
         semantic_ranked = self.store.vector_candidates_with_scores(
             query_vector, candidate_limit, document_id=document_id
