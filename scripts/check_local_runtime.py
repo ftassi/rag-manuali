@@ -20,10 +20,10 @@ def main() -> None:
 
     # Indirizzo riservato alla documentazione: basta il rifiuto locale del kernel.
     # Un timeout o una rete irraggiungibile non provano l'isolamento del servizio.
-    with socket.socket() as probe:
+    with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
         probe.settimeout(3)
         try:
-            probe.connect(("198.51.100.1", 443))
+            probe.sendto(b"local-runtime-probe", ("198.51.100.1", 443))
         except OSError as exc:
             if exc.errno not in {errno.EPERM, errno.EACCES}:
                 raise RuntimeError("Filtro IP non dimostrato: atteso EPERM/EACCES") from exc
