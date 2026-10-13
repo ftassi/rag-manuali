@@ -314,7 +314,10 @@ class Store:
         ]
         if not terms:
             return []
-        expression = " OR ".join(f'"{term}"*' for term in terms[:20])
+        expression = " OR ".join(
+            f'"{term[:5] if len(term) >= 6 and term.isalpha() else term}"*'
+            for term in terms[:20]
+        )
         params: list[Any] = [expression]
         document_filter = ""
         if document_id:

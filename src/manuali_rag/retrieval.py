@@ -8,7 +8,7 @@ from pathlib import Path
 
 from .config import Settings
 from .embeddings import Embedder, embed_query
-from .llm import LLMClient
+from .llm import LLMClient, LLMError
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
 
 IDENTIFIER_RE = re.compile(r"\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
@@ -101,6 +101,26 @@ def _complete_list_selection(selected: list[int], excerpts: list[tuple[int, str]
                 completed.add(offset + 1)
             else:
                 completed.update([offset + 1, *children])
+    return sorted(completed)
+
+
+def _complete_paragraph_selection(
+    selected: list[int], excerpts: list[tuple[int, str]], hits: list[SearchHit]
+) -> list[int]:
+    """Mantiene condizioni e passi nello stesso breve paragrafo, non altre voci di menu."""
+    completed = set(selected)
+    for source, hit in enumerate(hits, start=1):
+        for block in hit.content.split("\n\n"):
+            normalized = " ".join(block.split())
+            if len(normalized) > 450 or len(re.findall(r"[•◼➢❖▪]", normalized)) > 1:
+                continue
+            values = _source_sentences(block)
+            indices = [
+                index for index, (number, text) in enumerate(excerpts, start=1)
+                if number == source and text in values
+            ]
+            if len(indices) <= 5 and completed.intersection(indices):
+                completed.update(indices)
     return sorted(completed)
 
 
@@ -397,6 +417,34 @@ class AnswerService:
         self.retriever = retriever
         self.llm = llm
         self.settings = settings
+        self._query_cache: dict[str, str] = {}
+
+    def _search_question(self, question: str) -> str:
+        if self.settings.embedding_provider != "openai" or len(_term_features(question)) <= 1:
+            return question
+        if question not in self._query_cache:
+            try:
+                raw = self.llm.complete(
+                    user_text=(
+                        "Riformula la domanda in italiano per cercare la procedura in un manuale. "
+                        "Rendi esplicita l'operazione richiesta e conserva il soggetto, i nomi "
+                        "dei comandi e le negazioni. Non rispondere alla domanda e non aggiungere "
+                        "informazioni. Restituisci solo JSON con query, una domanda breve.\n"
+                        f"DOMANDA: {question}"
+                    ),
+                    system_prompt="Riscrivi domande per ricerca, senza risposte né nuove informazioni.",
+                    response_schema={"type": "object", "properties": {
+                        "query": {"type": "string"},
+                    }, "required": ["query"], "additionalProperties": False},
+                    max_tokens=100,
+                )
+                value = json.loads(raw).get("query")
+                self._query_cache[question] = (
+                    value if isinstance(value, str) and 3 <= len(value) <= 500 else question
+                )
+            except (LLMError, ValueError, AttributeError):
+                self._query_cache[question] = question
+        return self._query_cache[question]
 
     def answer(
         self,
@@ -408,7 +456,12 @@ class AnswerService:
     ) -> Answer:
         if _needs_clarification(question):
             return Answer(text=CLARIFICATION_TEXT, sources=[])
-        hits = self.retriever.search(question, top_k=top_k, document_id=document_id)
+        search_question = self._search_question(question)
+        semantic = self.settings.embedding_provider == "openai"
+        hits = self.retriever.search(
+            search_question, top_k=max(top_k or 5, 8) if semantic else top_k,
+            document_id=document_id,
+        )
         if not hits:
             return Answer(
                 text="Non ho trovato informazioni pertinenti nei manuali indicizzati.",
@@ -417,7 +470,8 @@ class AnswerService:
 
         # Una sola fonte riduce la contaminazione. Manteniamo anche la seconda soltanto quando
         # entrambi i punteggi (semantico e ibrido) sono quasi equivalenti.
-        hits = _select_answer_sources(hits, self.settings.answer_ambiguity_margin)
+        if not semantic:
+            hits = _select_answer_sources(hits, self.settings.answer_ambiguity_margin)
 
         excerpts: list[tuple[int, str]] = []
         image_paths: list[Path] = []
@@ -448,8 +502,15 @@ class AnswerService:
             )
 
         candidates = _candidate_indices(question, excerpts)
+        scores = []
+        if semantic and not image_paths:
+            query = embed_query(self.retriever.embedder, search_question)
+            vectors = self.retriever.embedder.embed([text for _, text in excerpts])
+            scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
+            nearest = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:10]
+            candidates = sorted(set(candidates[:4]) | {index + 1 for index in nearest})
         prompt = (
-            f"DOMANDA: {question}\nPASSAGGI:\n"
+            f"DOMANDA: {question}\nRICERCA: {search_question}\nPASSAGGI:\n"
             + "\n".join(f"[F{index}] {excerpts[index - 1][1]}" for index in candidates)
             + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
             'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
@@ -474,14 +535,8 @@ class AnswerService:
         }
         selected = _procedure_selection(question, hits, excerpts)
         if selected is None and self.settings.embedding_provider == "openai" and not image_paths:
-            query = embed_query(self.retriever.embedder, question)
-            vectors = self.retriever.embedder.embed([text for _, text in excerpts])
-            scores = [
-                sum(a * b for a, b in zip(query, vector, strict=True))
-                for vector in vectors
-            ]
             selected = _semantic_selection(
-                question, excerpts, scores, self.settings.answer_unit_min_similarity
+                question, excerpts, scores, 1.0
             )
         if selected is None:
             raw = self.llm.complete(user_text=prompt, **output_options)
@@ -507,6 +562,7 @@ class AnswerService:
                 "Consulta le pagine indicate."
             )
         else:
+            selected = _complete_paragraph_selection(selected, excerpts, hits)
             text = _render_excerpts(_complete_list_selection(selected, excerpts), excerpts)
             if not selected:
                 hits = []

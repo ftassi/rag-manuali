@@ -11,6 +11,7 @@ from manuali_rag.retrieval import (
     Retriever,
     _candidate_indices,
     _complete_list_selection,
+    _complete_paragraph_selection,
     _credential_value_supported,
     _grounded_answer,
     _needs_clarification,
@@ -370,6 +371,18 @@ def test_questions_without_a_subject_need_clarification() -> None:
     assert _credential_value_supported(
         "Come inserisco la mia password?", [(1, "Inserire la password assegnata.")]
     )
+
+
+def test_paragraph_completion_keeps_conditions_but_not_other_controls() -> None:
+    hit = _hit(1, 0.5)
+    hit.content = (
+        "Le opzioni dipendono dal profilo. Il revisore vede solo i propri documenti.\n\n"
+        "Sono disponibili: • Apri il dettaglio. • Ripristina la versione precedente."
+    )
+    excerpts = [(1, text) for text in _source_sentences(hit.content)]
+    assert _complete_paragraph_selection([2], excerpts, [hit]) == [1, 2]
+    last = len(excerpts)
+    assert _complete_paragraph_selection([last], excerpts, [hit]) == [last]
 
 
 def test_passage_ranking_recovers_short_answer_and_invalidates_changed_text(tmp_path: Path) -> None:
