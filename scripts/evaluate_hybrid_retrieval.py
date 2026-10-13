@@ -13,7 +13,7 @@ from pathlib import Path
 from evaluate_embeddings import DOCUMENTS, QUERIES
 
 from manuali_rag.config import Settings
-from manuali_rag.embeddings import HashEmbedder, OpenAIEmbedder
+from manuali_rag.embeddings import HashEmbedder, OpenAIEmbedder, embed_query
 from manuali_rag.retrieval import Retriever
 from manuali_rag.store import ChunkInput, Store
 
@@ -22,12 +22,22 @@ LEXICAL_WEIGHTS = [0.0, 0.25, 0.5, 0.75, 1.0, 1.25, 1.5]
 
 class CachingEmbedder:
     def __init__(self, wrapped: object, texts: list[str]) -> None:
+        self.wrapped = wrapped
+        self.query_cache = {}
         self.model_name = wrapped.model_name
         vectors = wrapped.embed(texts)
         self.cache = dict(zip(texts, vectors, strict=True))
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        missing = list(dict.fromkeys(text for text in texts if text not in self.cache))
+        if missing:
+            self.cache.update(zip(missing, self.wrapped.embed(missing), strict=True))
         return [self.cache[text] for text in texts]
+
+    def embed_query(self, text: str) -> list[float]:
+        if text not in self.query_cache:
+            self.query_cache[text] = embed_query(self.wrapped, text)
+        return self.query_cache[text]
 
 
 def prepare_store(root: Path, embedder: CachingEmbedder) -> Store:

@@ -107,6 +107,12 @@ def _complete_list_selection(selected: list[int], excerpts: list[tuple[int, str]
 def _credential_value_supported(question: str, excerpts: list[tuple[int, str]]) -> bool:
     credential = re.compile(r"password|credenzial|parola\s+d['’]ordine", re.IGNORECASE)
     initial = re.compile(r"predefinit|default|inizial", re.IGNORECASE)
+    if (
+        credential.search(question)
+        and re.search(r"\b(?:qual[e]?|dimmi)\b", question, re.IGNORECASE)
+        and re.search(r"\b(?:mia|mio|mie|miei|personale)\b", question, re.IGNORECASE)
+    ):
+        return False
     if not credential.search(question) or not initial.search(question):
         return True
     if re.search(r"\bcome\b", question, re.IGNORECASE):

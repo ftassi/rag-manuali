@@ -2,13 +2,15 @@ from __future__ import annotations
 
 import argparse
 import json
+import sqlite3
 from dataclasses import asdict
+from datetime import UTC, datetime
 from pathlib import Path
 
 import uvicorn
 
 from .config import Settings
-from .embeddings import build_embedder
+from .embeddings import build_embedder, vector_to_blob
 from .ingest import Ingestor
 from .llm import LLMClient
 from .retrieval import AnswerService, Retriever
@@ -56,9 +58,6 @@ def main() -> None:
     retriever = Retriever(store, embedder, settings)  # type: ignore[arg-type]
 
     if args.command == "reembed":
-        import sqlite3
-        from datetime import UTC, datetime
-
         with store.connect() as connection:
             chunks = connection.execute("SELECT id, content FROM chunks ORDER BY id").fetchall()
         vectors = []
@@ -70,8 +69,6 @@ def main() -> None:
         backup.parent.mkdir(parents=True, exist_ok=True)
         with store.connect() as connection, sqlite3.connect(backup) as destination:
             connection.backup(destination)
-        from .embeddings import vector_to_blob
-
         with store.connect() as connection:
             connection.execute("BEGIN IMMEDIATE")
             current = connection.execute("SELECT id, content FROM chunks ORDER BY id").fetchall()

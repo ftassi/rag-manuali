@@ -9,7 +9,7 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
-from manuali_rag.embeddings import HashEmbedder, OpenAIEmbedder
+from manuali_rag.embeddings import HashEmbedder, OpenAIEmbedder, embed_query
 
 DOCUMENTS = [
     ("power", "Prima di aprire il pannello, scollegare l'alimentazione elettrica."),
@@ -49,7 +49,7 @@ QUERIES = [
 def evaluate(name: str, embedder: object) -> dict[str, object]:
     started = time.perf_counter()
     document_vectors = embedder.embed([text for _, text in DOCUMENTS])
-    query_vectors = embedder.embed([query for query, _ in QUERIES])
+    query_vectors = [embed_query(embedder, query) for query, _ in QUERIES]
     elapsed = time.perf_counter() - started
     results = []
     reciprocal_ranks = []

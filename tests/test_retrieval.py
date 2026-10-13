@@ -364,6 +364,12 @@ def test_questions_without_a_subject_need_clarification() -> None:
     assert _needs_clarification("Dove devo cliccare?")
     assert not _needs_clarification("Dove clicco per aprire il diario?")
     assert not _needs_clarification("Come faccio il login?")
+    assert not _credential_value_supported(
+        "Qual è la mia password personale?", [(1, "Inserire la password assegnata.")]
+    )
+    assert _credential_value_supported(
+        "Come inserisco la mia password?", [(1, "Inserire la password assegnata.")]
+    )
 
 
 def test_passage_ranking_recovers_short_answer_and_invalidates_changed_text(tmp_path: Path) -> None:
