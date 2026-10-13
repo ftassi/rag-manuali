@@ -26,6 +26,22 @@ def _needs_clarification(question: str) -> bool:
     return not (tokens - generic)
 
 
+def _has_named_control(question: str, content: str) -> bool:
+    query = " ".join(question.casefold().split())
+    for text in _source_sentences(content):
+        for match in re.finditer(
+            r"(?:^[•◼➢]\s*|(?:cliccando|cliccare|clicca)\s+su\s+|"
+            r"(?:pulsante|voce|funzione|tasto)\s+)"
+            r"([A-ZÀ-Ý][\w’'-]+(?:\s+[\w’'-]+){1,3})", text,
+        ):
+            words = match.group(1).split()
+            for length in range(2, len(words) + 1):
+                label = " ".join(words[:length]).casefold()
+                if words[length - 1].casefold() not in FTS_STOPWORDS and label in query:
+                    return True
+    return False
+
+
 @dataclass(slots=True)
 class Answer:
     text: str
@@ -385,6 +401,8 @@ class Retriever:
         for hit in hits:
             if _focused_section(hit.content, question):
                 best[hit.chunk_id] = max(best.get(hit.chunk_id, 0.0), 0.9)
+            if _has_named_control(question, hit.content):
+                best[hit.chunk_id] = max(best.get(hit.chunk_id, 0.0), 1.4)
         ranked = sorted(hits, key=lambda hit: best.get(hit.chunk_id, -1.0), reverse=True)
         for hit in ranked:
             hit.semantic_score = best.get(hit.chunk_id, -1.0)
@@ -430,7 +448,13 @@ class Retriever:
         ranked = sorted(fused.items(), key=lambda item: item[1], reverse=True)
         hits = self.store.get_hits(ranked, semantic_scores)
         if self.settings.embedding_provider == "openai":
-            hits = self.passage_ranked(question, hits)
+            passages = self.passage_ranked(question, hits)
+            retained = passages[:max(1, top_k - 3)]
+            by_id = {hit.chunk_id: hit for hit in passages}
+            retained.extend(by_id[cid] for cid, _ in semantic_ranked[:3] if cid in by_id)
+            retained.extend(passages)
+            seen = set()
+            hits = [hit for hit in retained if not (hit.chunk_id in seen or seen.add(hit.chunk_id))]
         return hits[:top_k]
 
 
@@ -483,16 +507,22 @@ class AnswerService:
     ) -> Answer:
         if _needs_clarification(question):
             return Answer(text=CLARIFICATION_TEXT, sources=[])
-        search_question = self._search_question(question)
+        search_question = question
         semantic = self.settings.embedding_provider == "openai"
         hits = self.retriever.search(
             question, top_k=max(top_k or 5, 8) if semantic else top_k,
             document_id=document_id,
         )
-        if semantic and search_question != question:
-            extra = self.retriever.search(search_question, top_k=8, document_id=document_id)
-            seen = {hit.chunk_id for hit in hits}
-            hits.extend(hit for hit in extra if hit.chunk_id not in seen)
+        if semantic:
+            named = [hit for hit in hits if _has_named_control(question, hit.content)]
+            if named:
+                hits = named
+            else:
+                search_question = self._search_question(question)
+                if search_question != question:
+                    extra = self.retriever.search(search_question, top_k=8, document_id=document_id)
+                    seen = {hit.chunk_id for hit in hits}
+                    hits.extend(hit for hit in extra if hit.chunk_id not in seen)
         if not hits:
             return Answer(
                 text="Non ho trovato informazioni pertinenti nei manuali indicizzati.",
@@ -541,7 +571,13 @@ class AnswerService:
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
             scores = _lexical_evidence_scores(question, texts, scores)
             nearest = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:10]
-            candidates = sorted(set(candidates) | {index + 1 for index in nearest})
+            included = set(candidates) | {index + 1 for index in nearest}
+            for index in list(included):
+                source = excerpts[index - 1][0]
+                for neighbor in (index - 1, index + 1):
+                    if 1 <= neighbor <= len(excerpts) and excerpts[neighbor - 1][0] == source:
+                        included.add(neighbor)
+            candidates = sorted(included)
         prompt = (
             f"DOMANDA: {question}\nRICERCA: {search_question}\nPASSAGGI:\n"
             + "\n".join(f"[F{index}] {excerpts[index - 1][1]}" for index in candidates)
@@ -569,7 +605,7 @@ class AnswerService:
         selected = _procedure_selection(question, hits, excerpts)
         if selected is None and self.settings.embedding_provider == "openai" and not image_paths:
             selected = _semantic_selection(
-                question, excerpts, scores, 1.0
+                question, excerpts, scores, math.inf
             )
         if selected is None:
             raw = self.llm.complete(user_text=prompt, **output_options)
