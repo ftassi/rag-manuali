@@ -9,7 +9,7 @@ from pathlib import Path
 
 from .config import Settings
 from .embeddings import Embedder, embed_query
-from .llm import LLMClient, LLMError
+from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
 
 IDENTIFIER_RE = re.compile(r"\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
@@ -515,34 +515,13 @@ class AnswerService:
         self.retriever = retriever
         self.llm = llm
         self.settings = settings
-        self._query_cache: dict[str, str] = {}
 
     def _search_question(self, question: str) -> str:
-        if self.settings.embedding_provider != "openai" or len(_term_features(question)) <= 1:
-            return question
-        if question not in self._query_cache:
-            try:
-                raw = self.llm.complete(
-                    user_text=(
-                        "Riformula la domanda in italiano per cercare la procedura in un manuale. "
-                        "Rendi esplicita l'operazione richiesta e conserva il soggetto, i nomi "
-                        "dei comandi e le negazioni. Non rispondere alla domanda e non aggiungere "
-                        "informazioni. Restituisci solo JSON con query, una domanda breve.\n"
-                        f"DOMANDA: {question}"
-                    ),
-                    system_prompt="Riscrivi domande per ricerca, senza risposte né nuove informazioni.",
-                    response_schema={"type": "object", "properties": {
-                        "query": {"type": "string"},
-                    }, "required": ["query"], "additionalProperties": False},
-                    max_tokens=100,
-                )
-                value = json.loads(raw).get("query")
-                self._query_cache[question] = (
-                    value if isinstance(value, str) and 3 <= len(value) <= 500 else question
-                )
-            except (LLMError, ValueError, AttributeError):
-                self._query_cache[question] = question
-        return self._query_cache[question]
+        # Normalizza una locuzione di autenticazione senza eliminare operazione o contesto.
+        return re.sub(
+            r"\b(?:ho|ha|abbiamo)\s+(?:fatto|effettuato)\s+(?:l['’])?accesso\b(?!\s+all?[aeo]?\b)",
+            "dopo il login", question, flags=re.IGNORECASE,
+        )
 
     def answer(
         self,
@@ -619,14 +598,25 @@ class AnswerService:
             vectors = self.retriever._cached_vectors(contextual)
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
             scores = _lexical_evidence_scores(question, contextual, scores)
-            nearest = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:10]
-            included = set(candidates) | {index + 1 for index in nearest}
-            for index in list(included):
-                source = excerpts[index - 1][0]
-                for neighbor in (index - 1, index + 1):
-                    if 1 <= neighbor <= len(excerpts) and excerpts[neighbor - 1][0] == source:
-                        included.add(neighbor)
-            candidates = sorted(included)
+            ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
+            direct = None
+            features = _term_features(search_question)
+            for index in ranked:
+                text = excerpts[index][1]
+                if text.endswith(":") or len(FTS_TOKEN_RE.findall(text)) < 4:
+                    continue
+                matched = features & _term_features(contextual[index])
+                if (
+                    scores[index] >= self.settings.answer_unit_min_similarity
+                    and len(matched) >= min(2, len(features))
+                    and len(matched) / max(1, len(features)) >= 0.35
+                ):
+                    direct = [index + 1]
+                break
+            nearest = [index + 1 for index in ranked if not excerpts[index][1].endswith(":")][:4]
+            candidates = sorted(nearest)
+        else:
+            direct = None
         evidence_lines = []
         previous_source = None
         for visible, index in enumerate(candidates, start=1):
@@ -680,6 +670,8 @@ class AnswerService:
                 },
             })
         selected = _procedure_selection(question, hits, excerpts)
+        if selected is None and direct is not None:
+            selected = direct
         if selected is None and re.search(
             r"serve|acced|access|visualizz|vedere|vedo|trovo|trovare|aprire|apro|ottenere",
             question, re.IGNORECASE,
