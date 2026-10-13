@@ -13,7 +13,7 @@ import httpx
 
 from manuali_rag.cli import _components
 from manuali_rag.config import Settings
-from manuali_rag.retrieval import AnswerService, Retriever
+from manuali_rag.retrieval import CLARIFICATION_TEXT, AnswerService, Retriever
 
 
 def main() -> None:
@@ -48,7 +48,7 @@ def main() -> None:
                 answer_text = payload["answer"]
                 pages = [source["page"] for source in payload["sources"]]
                 source_count = len(payload["sources"])
-                images_ok = True
+                images_ok = bool(source_count) or case.get("expect_abstention", False)
                 for source in payload["sources"]:
                     if not source.get("page_url"):
                         images_ok = False
@@ -66,10 +66,13 @@ def main() -> None:
             source_count = len(answer.sources)
         normalized = answer_text.casefold()
         if case.get("expect_abstention", False):
-            facts_ok = answer_text in {
+            expected_texts = {
                 "Le fonti fornite non contengono questa informazione.",
                 "Non ho trovato informazioni pertinenti nei manuali indicizzati.",
             }
+            if case.get("expect_clarification", False):
+                expected_texts = {CLARIFICATION_TEXT}
+            facts_ok = answer_text in expected_texts
             sources_ok = not source_count
             citations_ok = True
         else:
@@ -90,6 +93,7 @@ def main() -> None:
             "required_terms": case.get("required_terms", []),
             "forbidden_terms": case.get("forbidden_terms", []),
             "expect_abstention": case.get("expect_abstention", False),
+            "expect_clarification": case.get("expect_clarification", False),
             "answer": answer_text,
             "selected_pdf_pages": pages,
             "facts_ok": facts_ok,

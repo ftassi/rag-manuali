@@ -155,6 +155,11 @@ class Store:
                     vector BLOB NOT NULL
                 );
 
+                CREATE TABLE IF NOT EXISTS passage_embedding_cache (
+                    cache_key TEXT PRIMARY KEY,
+                    vector BLOB NOT NULL
+                );
+
                 CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING fts5(
                     chunk_id UNINDEXED,
                     manual_title,
@@ -163,6 +168,26 @@ class Store:
                     tokenize='unicode61 remove_diacritics 2'
                 );
                 """
+            )
+
+    def passage_vectors(self, keys: list[str]) -> dict[str, tuple[float, ...]]:
+        cached = {}
+        with self.connect() as connection:
+            for start in range(0, len(keys), 400):
+                batch = keys[start:start + 400]
+                placeholders = ",".join("?" for _ in batch)
+                rows = connection.execute(
+                    f"SELECT cache_key, vector FROM passage_embedding_cache "
+                    f"WHERE cache_key IN ({placeholders})", batch,
+                ).fetchall()
+                cached.update({row["cache_key"]: blob_to_vector(row["vector"]) for row in rows})
+        return cached
+
+    def save_passage_vectors(self, rows: list[tuple[str, list[float]]]) -> None:
+        with self.connect() as connection:
+            connection.executemany(
+                "INSERT OR REPLACE INTO passage_embedding_cache(cache_key, vector) VALUES (?, ?)",
+                [(key, vector_to_blob(vector)) for key, vector in rows],
             )
 
     def document_by_checksum(self, checksum: str) -> dict[str, Any] | None:

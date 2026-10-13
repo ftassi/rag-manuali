@@ -1,4 +1,5 @@
 import json
+from dataclasses import replace
 from pathlib import Path
 
 import pytest
@@ -12,6 +13,7 @@ from manuali_rag.retrieval import (
     _complete_list_selection,
     _credential_value_supported,
     _grounded_answer,
+    _needs_clarification,
     _procedure_selection,
     _relevant_excerpt,
     _required_identifier,
@@ -355,6 +357,44 @@ def test_menu_selection_keeps_instruction_without_other_menu_items() -> None:
     excerpts = [(1, "In base alla configurazione è possibile accedere a diverse liste:"),
                 (1, "◼ Elementi aperti"), (1, "◼ Elementi archiviati")]
     assert _complete_list_selection([3], excerpts) == [1, 3]
+
+
+def test_questions_without_a_subject_need_clarification() -> None:
+    assert _needs_clarification("Come lo apro?")
+    assert _needs_clarification("Dove devo cliccare?")
+    assert not _needs_clarification("Dove clicco per aprire il diario?")
+    assert not _needs_clarification("Come faccio il login?")
+
+
+def test_passage_ranking_recovers_short_answer_and_invalidates_changed_text(tmp_path: Path) -> None:
+    class PassageEmbedder:
+        model_name = "test-passages"
+
+        def __init__(self):
+            self.inputs = []
+
+        def embed(self, texts):
+            self.inputs.extend(texts)
+            return [[1.0, 0.0] if "Archivia" in text else [0.0, 1.0] for text in texts]
+
+    settings = replace(settings_for(tmp_path), embedding_provider="openai")
+    store = Store(settings.database_path)
+    embedder = PassageEmbedder()
+    retriever = Retriever(store, embedder, settings)
+    wrong, correct = _hit(1, 0.8), _hit(2, 0.2)
+    wrong.content = "Impostazioni generali."
+    correct.content = "Testo non pertinente.\n\nPremere Archivia."
+    assert retriever.passage_ranked("Archivia", [wrong, correct])[0].chunk_id == 2
+    first_count = len(embedder.inputs)
+    retriever.passage_ranked("Archivia", [wrong, correct])
+    assert len(embedder.inputs) == first_count + 1  # solo la domanda
+    correct.content = "Premere Ripristina."
+    retriever.passage_ranked("Archivia", [wrong, correct])
+    assert "Premere Ripristina." in embedder.inputs[first_count + 1:]
+    embedder.model_name = "test-new-model"
+    previous = len(embedder.inputs)
+    retriever.passage_ranked("Archivia", [wrong, correct])
+    assert "Impostazioni generali." in embedder.inputs[previous:]
 
 
 def test_configurable_list_preserves_both_options_and_context() -> None:

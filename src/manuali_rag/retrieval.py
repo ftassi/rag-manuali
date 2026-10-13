@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -11,6 +12,17 @@ from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
 
 IDENTIFIER_RE = re.compile(r"\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
+CLARIFICATION_TEXT = (
+    "Di quale funzione o schermata del software stai parlando? "
+    "Specifica cosa vuoi aprire o quale operazione vuoi eseguire."
+)
+
+
+def _needs_clarification(question: str) -> bool:
+    # Verbi senza oggetto e pronomi non identificano una procedura; non inventare il contesto.
+    tokens = set(FTS_TOKEN_RE.findall(question.casefold())) - FTS_STOPWORDS
+    generic = {"dove", "devo", "cliccare", "clicco", "aprire", "apro", "lo", "la", "farlo"}
+    return not (tokens - generic)
 
 
 @dataclass(slots=True)
@@ -292,11 +304,43 @@ class Retriever:
         self.embedder = embedder
         self.settings = settings
 
+    def passage_ranked(self, question: str, hits: list[SearchHit]) -> list[SearchHit]:
+        units = [(hit, text) for hit in hits for text in _source_sentences(hit.content)]
+        if not units:
+            return []
+        prefix = f"passage-v1:{self.embedder.model_name}:"
+        keys = [prefix + hashlib.sha256(text.encode("utf-8")).hexdigest() for _, text in units]
+        cached = self.store.passage_vectors(keys)
+        missing = dict.fromkeys(key for key in keys if key not in cached)
+        text_by_key = dict(zip(keys, [text for _, text in units], strict=True))
+        new_rows = []
+        missing_keys = list(missing)
+        for start in range(0, len(missing_keys), 32):
+            batch = missing_keys[start:start + 32]
+            vectors = self.embedder.embed([text_by_key[key] for key in batch])
+            new_rows.extend(zip(batch, vectors, strict=True))
+        self.store.save_passage_vectors(new_rows)
+        cached.update(dict(new_rows))
+        query = self.embedder.embed([question])[0]
+        best: dict[int, float] = {}
+        for (hit, _), key in zip(units, keys, strict=True):
+            score = sum(a * b for a, b in zip(query, cached[key], strict=True))
+            best[hit.chunk_id] = max(best.get(hit.chunk_id, -1.0), score)
+        # Una procedura nominata esplicitamente mantiene priorità rispetto a sinonimi generici.
+        for hit in hits:
+            if _focused_section(hit.content, question):
+                best[hit.chunk_id] = max(best.get(hit.chunk_id, 0.0), 0.9)
+        ranked = sorted(hits, key=lambda hit: best.get(hit.chunk_id, -1.0), reverse=True)
+        for hit in ranked:
+            hit.semantic_score = best.get(hit.chunk_id, -1.0)
+            hit.score = hit.semantic_score
+        return ranked
+
     def search(
         self, question: str, top_k: int | None = None, document_id: str | None = None
     ) -> list[SearchHit]:
         top_k = top_k or self.settings.default_top_k
-        candidate_limit = max(self.settings.retrieval_candidates, top_k)
+        candidate_limit = max(self.settings.retrieval_candidates, top_k, 50)
         lexical = self.store.lexical_candidates(question, candidate_limit, document_id)
         # Un singolo verbo generico non deve prevalere sulla ricerca semantica.
         lexical = [
@@ -328,8 +372,11 @@ class Retriever:
             fused[lexical[0]] += self.settings.retrieval_lexical_weight / (
                 self.settings.retrieval_rrf_k + 1
             )
-        ranked = sorted(fused.items(), key=lambda item: item[1], reverse=True)[:top_k]
-        return self.store.get_hits(ranked, semantic_scores)
+        ranked = sorted(fused.items(), key=lambda item: item[1], reverse=True)
+        hits = self.store.get_hits(ranked, semantic_scores)
+        if self.settings.embedding_provider == "openai":
+            hits = self.passage_ranked(question, hits)
+        return hits[:top_k]
 
 
 class AnswerService:
@@ -351,6 +398,8 @@ class AnswerService:
         document_id: str | None = None,
         include_images: bool = True,
     ) -> Answer:
+        if _needs_clarification(question):
+            return Answer(text=CLARIFICATION_TEXT, sources=[])
         hits = self.retriever.search(question, top_k=top_k, document_id=document_id)
         if not hits:
             return Answer(
@@ -366,7 +415,12 @@ class AnswerService:
         image_paths: list[Path] = []
         seen_images: set[str] = set()
         for index, hit in enumerate(hits, start=1):
-            excerpt = _relevant_excerpt(hit.content, question)
+            excerpt = _focused_section(hit.content, question)
+            if excerpt is None:
+                excerpt = (
+                    hit.content if self.settings.embedding_provider == "openai"
+                    else _relevant_excerpt(hit.content, question)
+                )
             for sentence in _source_sentences(excerpt):
                 excerpts.append((index, sentence))
             if (
