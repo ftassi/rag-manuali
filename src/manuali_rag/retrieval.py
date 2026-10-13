@@ -596,13 +596,20 @@ class AnswerService:
                     if 1 <= neighbor <= len(excerpts) and excerpts[neighbor - 1][0] == source:
                         included.add(neighbor)
             candidates = sorted(included)
+        evidence_lines = []
+        previous_source = None
+        for visible, index in enumerate(candidates, start=1):
+            source, text = excerpts[index - 1]
+            if source != previous_source:
+                context = _page_context(hits[source - 1].content)
+                if context:
+                    evidence_lines.append(f"CONTESTO DELLA PAGINA: {context}")
+                previous_source = source
+            evidence_lines.append(f"[F{visible}] {text}")
         prompt = (
-            f"DOMANDA: {question}\nPASSAGGI:\n"
-            + "\n".join(
-                f"[F{visible}] {_contextual_passage(hits[excerpts[index - 1][0] - 1], excerpts[index - 1][1])}"
-                for visible, index in enumerate(candidates, start=1)
-            )
-            + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
+            "PASSAGGI:\n" + "\n".join(evidence_lines)
+            + f"\nDOMANDA: {question}\n"
+            + "Scegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
             'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
         )
         output_options = {

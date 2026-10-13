@@ -6,6 +6,7 @@ import argparse
 import json
 import subprocess
 import time
+from dataclasses import replace
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -21,11 +22,16 @@ def main() -> None:
     parser.add_argument("--cases", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--api-url", help="Collauda il servizio HTTP, incluse le pagine citate")
+    parser.add_argument("--model", help="Confronta un modello locale nella modalità CLI")
     args = parser.parse_args()
+    if args.model and args.api_url:
+        parser.error("--model si usa senza --api-url")
     cases = json.loads(args.cases.read_text(encoding="utf-8"))["cases"]
     if not cases:
         raise ValueError("Il file non contiene casi di collaudo")
     settings = Settings.from_env()
+    if args.model:
+        settings = replace(settings, llm_model=args.model)
     store, embedder, llm = _components(settings)
     service = AnswerService(Retriever(store, embedder, settings), llm, settings)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
@@ -111,6 +117,7 @@ def main() -> None:
         "code_commit": commit,
         "cases_file": str(args.cases.resolve()),
         "api_url": args.api_url,
+        "llm_model": settings.llm_model,
         "cases": results,
         "passed": sum(result["passed"] for result in results),
         "total": len(results),
