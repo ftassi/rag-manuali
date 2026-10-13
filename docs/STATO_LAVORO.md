@@ -103,9 +103,22 @@ L'indice principale contiene QARA e il documento sintetico importato dall'utente
 La prova fisica delle risposte QARA corrette sul desktop del Raspberry **resta da confermare**.
 Ricaricare il browser con `Ctrl+Shift+R` e ripetere le due domande, anche senza rete.
 
+## Ultimo riscontro dell'utente e varianti login — codice `2e70848`
+
+L'utente conferma risposta testuale e immagine corrette per i pazienti dimessi.
+Segnala ancora accesso confuso con firma per «come faccio il login?».
+La ricerca trattava «faccio» come argomento, ma escludeva già «fare»:
+corrette più forme colloquiali e aggiunti controlli contro la confusione con firma.
+Sul Raspberry, **51 test superati** e **otto formulazioni del login via API** superate
+con fatti, citazione, pagina 11 e immagine accessibile. Il servizio è stato riavviato.
+Collaudo QARA ampliato: **23/23**, regressione sintetica **11/11**, health superato; report privato
+`data/evaluations/qara-login-variants-2026-10-13.json`.
+Le sette nuove varianti sono nel file privato `data/evaluations/qara-cases.json`.
+La conferma nel browser dell'utente della variante corretta resta da ricevere.
+
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** ripetere e registrare la prova delle risposte QARA corrette nel browser del Raspberry
+1. **Consigliato:** ripetere e registrare la prova della variante login corretta nel browser del Raspberry
    con rete fisicamente scollegata:
    domanda, apertura della pagina e importazione di un file locale. Lo scollegamento
    interrompe SSH, quindi quella parte richiede l'utente davanti al Raspberry.

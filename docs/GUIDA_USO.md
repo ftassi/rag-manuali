@@ -430,4 +430,20 @@ insieme alle pagine: sono state corrette e aggiunte al collaudo privato.
 L'interfaccia ora mostra il testo sopra le fonti e, per le pagine PDF disponibili,
 l'anteprima direttamente nella stessa schermata. Il placeholder è coerente con i software
 sanitari. Dopo `Ctrl+Shift+R`, ripetere le due domande e controllare sia il testo sia l'immagine;
-questa nuova prova fisica resta in attesa dell'esito dell'utente.
+L'utente ha poi confermato correttezza del testo e dell'immagine per i pazienti dimessi.
+La variante «come faccio il login?» ha ancora fallito, confondendo accesso e firma;
+il requisito complessivo resta aperto fino al ricollaudo di quella variante.
+
+
+### Varianti colloquiali del login
+
+La correzione `2e70848` tratta in modo coerente le forme dei verbi di supporto
+(«fare», «faccio», «devo», «effettuo», ecc.) nella ricerca delle procedure.
+Sul Raspberry, otto formulazioni dell'accesso, inclusa quella segnalata dall'utente,
+restituiscono testo, citazione e pagina corretti, senza passaggi sulla firma.
+Sono stati aggiunti test per mantenere distinte le domande sulla firma e sull'accesso.
+`make check`: 51 test superati. Collaudo QARA ampliato: **23/23**, regressione sintetica **11/11**; report privato
+`data/evaluations/qara-login-variants-2026-10-13.json`. Le nuove formulazioni sono conservate nel file privato
+dei casi, insieme alle prove precedenti. Dopo l'aggiornamento, ripetere la domanda esatta
+nel browser del Raspberry per confermare l'esito pratico; non considerare i controlli
+su alcune formulazioni una garanzia su ogni possibile domanda.
