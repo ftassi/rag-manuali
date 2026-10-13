@@ -579,8 +579,11 @@ class AnswerService:
                         included.add(neighbor)
             candidates = sorted(included)
         prompt = (
-            f"DOMANDA: {question}\nRICERCA: {search_question}\nPASSAGGI:\n"
-            + "\n".join(f"[F{index}] {excerpts[index - 1][1]}" for index in candidates)
+            f"DOMANDA: {question}\nPASSAGGI:\n"
+            + "\n".join(
+                f"[F{visible}] {excerpts[index - 1][1]}"
+                for visible, index in enumerate(candidates, start=1)
+            )
             + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
             'Se le fonti non contengono la risposta, restituisci {"extracts": []}.'
         )
@@ -591,7 +594,7 @@ class AnswerService:
                 "type": "object",
                 "properties": {"extracts": {
                     "type": "array",
-                    "items": {"type": "integer", "enum": candidates},
+                    "items": {"type": "integer", "minimum": 1, "maximum": len(candidates)},
                     "maxItems": 5,
                 }},
                 "required": ["extracts"],
@@ -603,34 +606,48 @@ class AnswerService:
             ),
         }
         selected = _procedure_selection(question, hits, excerpts)
+        if selected is None and re.search(
+            r"serve|acced|access|visualizz|vedere|vedo|trovo|trovare|aprire|apro|ottenere",
+            question, re.IGNORECASE,
+        ):
+            anchors = [index for index, (_, text) in enumerate(excerpts, start=1)
+                       if _has_named_control(question, text)]
+            if anchors:
+                selected = anchors[:1]
         if selected is None and self.settings.embedding_provider == "openai" and not image_paths:
             selected = _semantic_selection(
                 question, excerpts, scores, math.inf
             )
         if selected is None:
             raw = self.llm.complete(user_text=prompt, **output_options)
-            selected = _selected_indices(raw, len(excerpts))
-            if selected is not None and any(index not in candidates for index in selected):
-                selected = None
+            visible = _selected_indices(raw, len(candidates))
+            selected = [candidates[index - 1] for index in visible] if visible is not None else None
         if selected is None:
             correction = (
                 f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
                 "La risposta precedente non contiene estratti verificabili nel formato richiesto. "
                 "Usa solo numeri F presenti nelle FONTI. "
-                f"I numeri validi sono: {candidates}. "
+                f"I numeri validi sono da 1 a {len(candidates)}. "
                 f"Correggi questa selezione: {raw}\n"
                 'Restituisci esclusivamente JSON con il campo "extracts" e numeri validi.'
             )
             raw = self.llm.complete(user_text=correction, **output_options)
-            selected = _selected_indices(raw, len(excerpts))
-            if selected is not None and any(index not in candidates for index in selected):
-                selected = None
+            visible = _selected_indices(raw, len(candidates))
+            selected = [candidates[index - 1] for index in visible] if visible is not None else None
         if selected is None:
             text = (
                 "Non riesco a ricavare una risposta verificabile dalle fonti fornite. "
                 "Consulta le pagine indicate."
             )
         else:
+            if selected and scores:
+                source_scores: dict[int, float] = {}
+                for index in selected:
+                    source = excerpts[index - 1][0]
+                    source_scores[source] = max(source_scores.get(source, -1.0), scores[index - 1])
+                strongest = max(source_scores.values())
+                selected = [index for index in selected
+                            if source_scores[excerpts[index - 1][0]] >= strongest - 0.12]
             selected = _complete_paragraph_selection(selected, excerpts, hits)
             text = _render_excerpts(_complete_list_selection(selected, excerpts), excerpts)
             if not selected:
