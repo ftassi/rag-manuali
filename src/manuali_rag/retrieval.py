@@ -294,7 +294,8 @@ def _term_features(text: str) -> set[str]:
     features: set[str] = set()
     for token in FTS_TOKEN_RE.findall(text.casefold()):
         if token in FTS_STOPWORDS or (
-            len(token) <= 2 and not any(char.isdigit() for char in token)
+            len(token) <= 2 and token not in {"me", "io", "tu"}
+            and not any(char.isdigit() for char in token)
         ):
             continue
         features.add(token)
@@ -433,10 +434,11 @@ class Retriever:
         if not units:
             return []
         texts = [text for _, text in units]
-        vectors = self._cached_vectors([_contextual_passage(hit, text) for hit, text in units])
+        contextual = [_contextual_passage(hit, text) for hit, text in units]
+        vectors = self._cached_vectors(contextual)
         query = embed_query(self.embedder, question)
         scores = [sum(a * b for a, b in zip(query, vector, strict=True)) for vector in vectors]
-        scores = _lexical_evidence_scores(question, texts, scores)
+        scores = _lexical_evidence_scores(question, contextual, scores)
         best: dict[int, float] = {}
         for (hit, _), score in zip(units, scores, strict=True):
             best[hit.chunk_id] = max(best.get(hit.chunk_id, -1.0), score)
@@ -611,11 +613,12 @@ class AnswerService:
         if semantic and not image_paths:
             query = embed_query(self.retriever.embedder, search_question)
             texts = [text for _, text in excerpts]
-            vectors = self.retriever._cached_vectors([
+            contextual = [
                 _contextual_passage(hits[source - 1], text) for source, text in excerpts
-            ])
+            ]
+            vectors = self.retriever._cached_vectors(contextual)
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
-            scores = _lexical_evidence_scores(question, texts, scores)
+            scores = _lexical_evidence_scores(question, contextual, scores)
             nearest = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:10]
             included = set(candidates) | {index + 1 for index in nearest}
             for index in list(included):
@@ -731,7 +734,7 @@ class AnswerService:
                     source_scores[source] = max(source_scores.get(source, -1.0), scores[index - 1])
                 strongest = max(source_scores.values())
                 selected = [index for index in selected
-                            if source_scores[excerpts[index - 1][0]] >= strongest - 0.12]
+                            if source_scores[excerpts[index - 1][0]] >= strongest - self.settings.answer_ambiguity_margin]
             selected = _complete_paragraph_selection(selected, excerpts, hits)
             text = _render_excerpts(_complete_list_selection(selected, excerpts), excerpts)
             if not selected:
