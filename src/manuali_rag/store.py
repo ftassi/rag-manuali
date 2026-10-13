@@ -12,6 +12,21 @@ from .embeddings import blob_to_vector, vector_to_blob
 
 FTS_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
 FTS_STOPWORDS = {
+    # Verbi di supporto della domanda: l'argomento è "login", "firma", ecc.
+    # Le forme coniugate devono essere trattate come gli infiniti già esclusi.
+    "faccio",
+    "fai",
+    "facciamo",
+    "fate",
+    "fanno",
+    "effettuo",
+    "effettuare",
+    "eseguo",
+    "eseguire",
+    "devo",
+    "dovrei",
+    "puoi",
+    "potresti",
     "posso",
     "potrei",
     "possiamo",

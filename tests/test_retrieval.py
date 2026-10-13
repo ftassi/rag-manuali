@@ -1,6 +1,8 @@
 import json
 from pathlib import Path
 
+import pytest
+
 from manuali_rag.config import Settings
 from manuali_rag.embeddings import HashEmbedder
 from manuali_rag.retrieval import (
@@ -314,25 +316,39 @@ def test_numbered_procedure_keeps_all_steps() -> None:
     assert _source_sentences(text) == ["1. Inserire identificativo e credenziale. 2. Premere Entra."]
 
 
-def test_conversational_query_finds_procedure_and_instructions() -> None:
+@pytest.mark.parametrize("question", [
+    "Come posso fare il login?",
+    "come faccio il login?",
+    "Come faccio a fare il login?",
+    "Come facciamo il login?",
+    "Come devo fare il login?",
+    "Come dovrei effettuare il login?",
+    "Come effettuo il login?",
+    "Come eseguo il login?",
+])
+def test_conversational_query_finds_procedure_and_instructions(question: str) -> None:
     content = (
         "Introduzione.\n\n2.1 Login\n\nUsare le credenziali assegnate.\n\n"
         "1. Inserire identificativo e credenziale.\n2. Premere Entra.\n\n"
         "Figura 2-1 Accesso\n\nSelezionare il contesto autorizzato.\n\n2.2 Altre funzioni"
     )
-    assert _strong_lexical_match("Come posso fare il login?", content)
-    excerpt = _relevant_excerpt(content, "Come posso fare il login?")
+    assert _strong_lexical_match(question, content)
+    excerpt = _relevant_excerpt(content, question)
     assert "Premere Entra" in excerpt
     assert "Selezionare il contesto" in excerpt
     assert "Altre funzioni" not in excerpt
 
 
-def test_named_procedure_uses_all_steps_without_semantic_threshold() -> None:
+@pytest.mark.parametrize("question", [
+    "Come posso fare il login?", "come faccio il login?", "Come effettuo il login?",
+])
+def test_named_procedure_uses_all_steps_without_semantic_threshold(question: str) -> None:
     hit = _hit(1, 0.3)
     hit.content = "2.1 Login\n\n1. Inserire credenziale.\n2. Premere Entra."
     excerpts = [(1, "Inserire credenziale."), (1, "Premere Entra.")]
-    assert _procedure_selection("Come posso fare il login?", [hit], excerpts) == [1, 2]
+    assert _procedure_selection(question, [hit], excerpts) == [1, 2]
     assert _procedure_selection("Come firmare il documento?", [hit], excerpts) is None
+    assert _procedure_selection("Come faccio la firma dopo il login?", [hit], excerpts) is None
 
 
 def test_menu_selection_keeps_instruction_without_other_menu_items() -> None:
