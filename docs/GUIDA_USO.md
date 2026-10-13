@@ -25,7 +25,7 @@ disponibile; la prova con Wi-Fi/cavo fisicamente scollegati va distinta da quest
 3. Per aggiungere un manuale, scegli il file in **Importa un manuale** e premi
    **Importa e indicizza**. Aspetta la conferma prima di fare domande sul nuovo documento.
 4. Scrivi una domanda precisa e premi **Cerca nei manuali**.
-5. Leggi la risposta e controlla le fonti con **Apri la pagina**.
+5. Leggi la risposta testuale e controlla l’anteprima della pagina sotto le fonti. Usa **Apri la pagina** per ingrandirla. Nei documenti Markdown senza immagini la fonte resta testuale.
 
 `127.0.0.1` indica la macchina su cui è aperto il browser: questo indirizzo va usato
 **nel browser del Raspberry**, non in quello di un altro PC.
@@ -349,12 +349,22 @@ riservati nella guida o nella cronologia pubblica.
   Ollama ha anche `OLLAMA_NO_CLOUD=true`. Dopo il riavvio: health e modelli disponibili,
   interfaccia HTTP, domanda QARA e pagina citata superati; 6/6 controlli di importazione
   e interrogazione HTTP in un indice temporaneo. `make check`: 37 test superati.
-- Da completare come verifica pratica dell'utente: uso del browser sul desktop del
-  Raspberry con Wi-Fi e cavo scollegati. La prova automatica isola i servizi dalla rete
-  esterna mantenendo SSH disponibile, senza scollegare tutta la macchina.
+- **Prova pratica riferita dall'utente:** importazione del documento sintetico e risposta
+  testuale con citazione riuscite senza rete. Le prime due domande QARA (accesso e
+  visualizzazione dei dimessi) non sono state accettate per la risposta testuale mancante
+  o inadeguata: la prova complessiva non va dichiarata superata.
+- **Correzioni successive, codice `16d2b63`:** 42 test automatici, 16/16 casi QARA
+  (inclusi i due segnalati), 11/11 casi sintetici e 6/6 controlli HTTP. Verificati via API
+  e nel browser testo completo e immagini delle fonti per le due domande. Il browser
+  di collaudo sul PC usa un tunnel SSH locale al servizio Raspberry; non è una nuova
+  prova sul desktop del Raspberry con rete fisicamente scollegata.
+  Report privato: `data/evaluations/qara-text-visual-2026-10-13.json`.
+  Ripetuta anche la prova con rete esterna bloccata per i servizi.
 
 Il collegamento **Manuali RAG** è installato sul desktop e nel menu applicazioni.
-Il prossimo passaggio è confermare la prova nel browser con rete fisicamente scollegata.
+Il prossimo passaggio è ripetere le due domande QARA nel browser del Raspberry dopo
+le correzioni e confermare testo e immagini anche senza rete. Ricaricare la pagina con
+`Ctrl+Shift+R` per vedere l’interfaccia aggiornata.
 Le alternative sono ampliare i manuali e le domande di prova oppure aggiungere selettore
 dei manuali, gestione delle revisioni e accesso alla guida dall'interfaccia locale.
 
@@ -410,3 +420,14 @@ L'importazione aggiunge un documento sintetico all'indice principale, senza modi
 QARA; ripetere lo stesso file non lo duplica. Non è disponibile la rimozione dall'interfaccia.
 Questa prova pratica va dichiarata superata solo dopo conferma dei passaggi; la precedente
 prova automatica con isolamento dei servizi resta un controllo distinto.
+
+
+### Esito della prova e ricollaudo
+
+L'utente ha confermato che l'importazione di `prova-offline.md`, la risposta e la citazione
+funzionano offline. Le prime risposte QARA non soddisfacevano il requisito di testo utile
+insieme alle pagine: sono state corrette e aggiunte al collaudo privato.
+L'interfaccia ora mostra il testo sopra le fonti e, per le pagine PDF disponibili,
+l'anteprima direttamente nella stessa schermata. Il placeholder è coerente con i software
+sanitari. Dopo `Ctrl+Shift+R`, ripetere le due domande e controllare sia il testo sia l'immagine;
+questa nuova prova fisica resta in attesa dell'esito dell'utente.

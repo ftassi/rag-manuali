@@ -77,11 +77,35 @@ il collegamento nel menu applicazioni in `~/.local/share/applications`.
 Il file `.desktop` è stato verificato con `desktop-file-validate`; usa `xdg-open` sulla
 pagina locale, senza avviare un nuovo server. Il browser predefinito è Firefox.
 Firefox è stato avviato nella sessione Wayland con la pagina locale e il servizio risponde.
-La prova fisica è stata proposta all'utente ed è **in attesa di conferma**, non dichiarata superata. La procedura è nella guida, sezione 13.
+L'utente ha svolto la prova: importazione del Markdown sintetico e risposta con fonte
+riuscite offline; due risposte QARA insoddisfacenti. Il risultato complessivo resta parziale.
+La procedura è nella guida, sezione 13.
+
+## Ultime correzioni a testo e immagini — codice `16d2b63`
+
+Il linguaggio conversazionale non deve escludere la sezione richiesta dalla ricerca.
+Le procedure con titolo corrispondente conservano tutti i passaggi; riferimenti come
+«Rif. Par.» non spezzano le frasi; le voci di menu mantengono il comando introduttivo,
+con esclusione delle altre voci non richieste. Il testo dell'indice non diventa risposta.
+L'interfaccia mostra testo e anteprima delle pagine PDF insieme, con link per ingrandirle;
+il placeholder usa esempi dell'ambito dei software sanitari.
+
+Verifiche sul Raspberry: **42 test**, **16/16 QARA**, **11/11 end-to-end**, **6/6 HTTP**.
+Le due nuove domande sono nel file privato `data/evaluations/qara-cases.json`; report
+`data/evaluations/qara-text-visual-2026-10-13.json`. Domande e contenuti riservati restano
+fuori da Git. Le due risposte API hanno testo, citazioni e pagine corrette.
+Il servizio è stato riavviato sul codice nuovo. Nel browser del PC, collegato al servizio
+Raspberry tramite tunnel SSH locale temporaneo, verificate entrambe le risposte testuali
+con immagini caricate; controllata visivamente la schermata testo e anteprima.
+Ripetuta con successo la prova con rete esterna bloccata nella slice comune.
+L'indice principale contiene QARA e il documento sintetico importato dall'utente.
+
+La prova fisica delle risposte QARA corrette sul desktop del Raspberry **resta da confermare**.
+Ricaricare il browser con `Ctrl+Shift+R` e ripetere le due domande, anche senza rete.
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** completare e registrare la prova pratica nel browser del Raspberry
+1. **Consigliato:** ripetere e registrare la prova delle risposte QARA corrette nel browser del Raspberry
    con rete fisicamente scollegata:
    domanda, apertura della pagina e importazione di un file locale. Lo scollegamento
    interrompe SSH, quindi quella parte richiede l'utente davanti al Raspberry.
