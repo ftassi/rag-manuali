@@ -302,6 +302,30 @@ def test_source_sentences_separate_controls_from_section_heading() -> None:
     ) == ["Sono disponibili:", "• Avvia il processo.", "• Annulla le modifiche."]
 
 
+def test_cross_reference_does_not_become_a_standalone_answer() -> None:
+    text = "• Elementi archiviati negli ultimi giorni (Rif. Par. 2.3 Elementi archiviati)."
+    assert _source_sentences(text) == [text]
+    assert _source_sentences("2.3 Elementi archiviati ............. 40") == []
+
+
+def test_numbered_procedure_keeps_all_steps() -> None:
+    text = "1. Inserire identificativo e credenziale.\n2. Premere Entra."
+    assert _source_sentences(text) == ["1. Inserire identificativo e credenziale. 2. Premere Entra."]
+
+
+def test_conversational_query_finds_procedure_and_instructions() -> None:
+    content = (
+        "Introduzione.\n\n2.1 Login\n\nUsare le credenziali assegnate.\n\n"
+        "1. Inserire identificativo e credenziale.\n2. Premere Entra.\n\n"
+        "Figura 2-1 Accesso\n\nSelezionare il contesto autorizzato.\n\n2.2 Altre funzioni"
+    )
+    assert _strong_lexical_match("Come posso fare il login?", content)
+    excerpt = _relevant_excerpt(content, "Come posso fare il login?")
+    assert "Premere Entra" in excerpt
+    assert "Selezionare il contesto" in excerpt
+    assert "Altre funzioni" not in excerpt
+
+
 def test_configurable_list_preserves_both_options_and_context() -> None:
     excerpts = [
         (1, "In base alla configurazione il sistema può:"),

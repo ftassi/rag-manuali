@@ -12,6 +12,9 @@ from .embeddings import blob_to_vector, vector_to_blob
 
 FTS_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
 FTS_STOPWORDS = {
+    "posso",
+    "potrei",
+    "possiamo",
     "a",
     "al",
     "all",

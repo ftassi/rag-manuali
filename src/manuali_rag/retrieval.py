@@ -23,6 +23,8 @@ def _source_sentences(excerpt: str) -> list[str]:
     sentences = []
     for block in excerpt.split("\n\n"):
         normalized = " ".join(block.split())
+        if re.search(r"\.{3,}", normalized):
+            continue
         if re.match(r"^(?:Figura|Tabella)\s+\d", normalized, re.IGNORECASE):
             continue
         if re.match(r"^\d+(?:\.\d+)+\s+[^.!?]+$", normalized):
@@ -31,10 +33,16 @@ def _source_sentences(excerpt: str) -> list[str]:
             continue
         if normalized.startswith("Confidential") and "Record name:" in normalized:
             continue
+        # Una procedura numerata deve mantenere insieme i passi, non solo il più simile.
+        if re.match(r"^\d+\.\s+", normalized):
+            sentences.append(normalized)
+            continue
         for item in re.split(r"\s+(?=[•◼➢]|\d+\.\s+[A-Z])", normalized):
             item = re.sub(r"^\d+\.\s+", "", item)
             sentences.extend(
-                sentence for sentence in re.split(r"(?<=[.!?])\s+", item) if sentence
+                sentence for sentence in re.split(
+                    r"(?<!Rif\.)(?<!Par\.)(?<=[.!?])\s+", item, flags=re.IGNORECASE
+                ) if sentence
             )
     return sentences
 
@@ -210,6 +218,17 @@ def _relevant_excerpt(content: str, question: str, max_blocks: int = 3) -> str:
     if len(blocks) <= max_blocks:
         return content
     question_features = _term_features(question)
+    # Le parole della domanda possono comparire solo nell'intestazione della procedura.
+    # In quel caso servono i paragrafi successivi, non la sola intestazione o didascalia.
+    for index, block in enumerate(blocks):
+        if re.fullmatch(r"\d+(?:\.\d+)+\s+[^.!?]+", " ".join(block.split())):
+            if question_features and question_features <= _term_features(block):
+                end = index + 1
+                while end < len(blocks) and end < index + 7:
+                    if re.match(r"^\d+(?:\.\d+)+\s+", blocks[end]):
+                        break
+                    end += 1
+                return "\n\n".join(blocks[index:end])
     ranked = sorted(
         (
             (len(question_features & _term_features(block)), index)

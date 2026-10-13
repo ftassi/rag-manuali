@@ -21,6 +21,8 @@
     .answer { white-space: pre-wrap; line-height: 1.6; }
     .source { border-left: 3px solid #d38b33; padding: 8px 12px; margin: 12px 0; }
     .source a { color: #165f46; font-weight: 650; }
+    .source img { display: block; max-width: 100%; max-height: 520px; margin-top: 12px;
+      object-fit: contain; object-position: left; border: 1px solid #d9ddd8; }
     .muted, #status { color: #68736e; font-size: .92rem; }
     .error { color: #9b2c2c; }
   </style>
@@ -39,7 +41,7 @@
 
   <section class="card">
     <h2>Fai una domanda</h2>
-    <textarea id="question" placeholder="Ad esempio: come si pulisce il filtro e quali avvertenze devo seguire?"></textarea>
+    <textarea id="question" placeholder="Ad esempio: come accedo al software o visualizzo i pazienti dimessi?"></textarea>
     <p><button id="ask">Cerca nei manuali</button></p>
     <p id="status"></p>
     <div id="answer" class="answer"></div>
@@ -83,11 +85,12 @@
       const data = await response.json();
       if (!response.ok) throw new Error(data.detail || 'Richiesta fallita');
       status.textContent = '';
-      answer.textContent = data.answer;
+      answer.textContent = data.answer || 'Non è disponibile una risposta testuale. Prova a riformulare la domanda.';
       sources.innerHTML = '<h3>Fonti</h3>' + data.sources.map((source, i) => `
         <div class="source"><strong>[S${i + 1}] ${source.manual_title}</strong><br>
         ${source.section}${source.page ? `, pagina ${source.page}` : ''}<br>
-        ${source.page_url ? `<a href="${source.page_url}" target="_blank">Apri la pagina</a>` : ''}</div>
+        ${source.page_url ? `<a href="${source.page_url}" target="_blank" rel="noopener">Apri la pagina
+          <img src="${source.page_url}" alt="Pagina ${source.page} del manuale citato" loading="lazy"></a>` : ''}</div>
       `).join('');
     } catch (error) { status.innerHTML = `<span class="error">${error.message}</span>`; }
     finally { ask.disabled = false; }
