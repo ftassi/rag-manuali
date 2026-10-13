@@ -166,7 +166,7 @@ def _complete_list_selection(selected: list[int], excerpts: list[tuple[int, str]
 
 
 def _complete_paragraph_selection(
-    selected: list[int], excerpts: list[tuple[int, str]], hits: list[SearchHit]
+    selected: list[int], excerpts: list[tuple[int, str]], hits: list[SearchHit], question: str = ""
 ) -> list[int]:
     """Mantiene condizioni e passi nello stesso breve paragrafo, non altre voci di menu."""
     completed = set(selected)
@@ -186,7 +186,12 @@ def _complete_paragraph_selection(
                 if completed.intersection(permissions):
                     completed.update(permissions)
             elif len(indices) <= 5 and completed.intersection(indices):
-                completed.update(indices)
+                if (
+                    not question
+                    or re.search(r"\bcome\b|\bperch[eé]\b|\be\s+(?:quali?|dove|come|cosa)", question, re.IGNORECASE)
+                    or any(re.match(r"Per (?:procedere|ultimare|confermare)", value) for value in values)
+                ):
+                    completed.update(indices)
     return sorted(completed)
 
 
@@ -535,6 +540,17 @@ class AnswerService:
             return Answer(text=CLARIFICATION_TEXT, sources=[])
         search_question = question
         semantic = self.settings.embedding_provider == "openai"
+        if semantic:
+            tokens = FTS_TOKEN_RE.findall(question)
+            proper = [token.casefold() for token in tokens[1:]
+                      if len(token) >= 4 and token[0].isupper() and token[1:].islower()
+                      and token.casefold() not in FTS_STOPWORDS]
+            if proper:
+                vocabulary = set(FTS_TOKEN_RE.findall(" ".join(
+                    hit.content for hit in self.retriever.store.all_hits(document_id)
+                ).casefold()))
+                if any(word not in vocabulary for word in proper):
+                    return Answer("Le fonti fornite non contengono questa informazione.", [])
         hits = self.retriever.search(
             question, top_k=max(top_k or 5, 8) if semantic else top_k,
             document_id=document_id,
@@ -603,7 +619,10 @@ class AnswerService:
             features = _term_features(search_question)
             for index in ranked:
                 text = excerpts[index][1]
-                if text.endswith(":") or len(FTS_TOKEN_RE.findall(text)) < 4:
+                if (
+                    text.endswith(":") or len(FTS_TOKEN_RE.findall(text)) < 4
+                    or re.match(r"^\d+-\s*\d+[a-z]", text)
+                ):
                     continue
                 matched = features & _term_features(contextual[index])
                 if (
@@ -613,7 +632,8 @@ class AnswerService:
                 ):
                     direct = [index + 1]
                 break
-            nearest = [index + 1 for index in ranked if not excerpts[index][1].endswith(":")][:4]
+            nearest = [index + 1 for index in ranked if not excerpts[index][1].endswith(":")
+                       and not re.match(r"^\d+-\s*\d+[a-z]", excerpts[index][1])][:4]
             candidates = sorted(nearest)
         else:
             direct = None
@@ -670,8 +690,6 @@ class AnswerService:
                 },
             })
         selected = _procedure_selection(question, hits, excerpts)
-        if selected is None and direct is not None:
-            selected = direct
         if selected is None and re.search(
             r"serve|acced|access|visualizz|vedere|vedo|trovo|trovare|aprire|apro|ottenere",
             question, re.IGNORECASE,
@@ -686,6 +704,8 @@ class AnswerService:
             selected = _semantic_selection(
                 question, excerpts, scores, math.inf
             )
+        if selected is None and direct is not None:
+            selected = direct
         if selected is None:
             raw = self.llm.complete(user_text=prompt, **output_options)
             if semantic:
@@ -727,7 +747,7 @@ class AnswerService:
                 strongest = max(source_scores.values())
                 selected = [index for index in selected
                             if source_scores[excerpts[index - 1][0]] >= strongest - self.settings.answer_ambiguity_margin]
-            selected = _complete_paragraph_selection(selected, excerpts, hits)
+            selected = _complete_paragraph_selection(selected, excerpts, hits, question)
             text = _render_excerpts(_complete_list_selection(selected, excerpts), excerpts)
             if not selected:
                 hits = []
