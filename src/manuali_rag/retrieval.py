@@ -647,9 +647,9 @@ class AnswerService:
                     scores[index] >= self.settings.answer_unit_min_similarity
                     and len(matched) >= min(2, len(features))
                     and len(matched) / max(1, len(features)) >= 0.35
+                    and direct is None
                 ):
-                    if direct is None:
-                        direct = [index + 1]
+                    direct = [index + 1]
                 break
             nearest = [index + 1 for index in ranked if not excerpts[index][1].endswith(":")
                        and not re.match(r"^\d+-\s*\d+[a-z]", excerpts[index][1])][:4]
