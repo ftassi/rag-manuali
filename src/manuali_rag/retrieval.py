@@ -435,7 +435,6 @@ class Retriever:
         units = [(hit, text) for hit in hits for text in _source_sentences(hit.content)]
         if not units:
             return []
-        texts = [text for _, text in units]
         contextual = [_contextual_passage(hit, text) for hit, text in units]
         vectors = self._cached_vectors(contextual)
         query = embed_query(self.embedder, question)
@@ -614,7 +613,6 @@ class AnswerService:
         scores = []
         if semantic and not image_paths:
             query = embed_query(self.retriever.embedder, search_question)
-            texts = [text for _, text in excerpts]
             contextual = [
                 _contextual_passage(hits[source - 1], text) for source, text in excerpts
             ]
