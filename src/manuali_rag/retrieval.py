@@ -530,8 +530,16 @@ class AnswerService:
             r"\b(\w+)\s+che\s+(?:sono|è|e)\s+stat[ioae]\s+(\w+)\b",
             r"\1 \2", normalized, flags=re.IGNORECASE,
         )
+        normalized = re.sub(
+            r"\brichiud\w*\b", "chiudere", normalized, flags=re.IGNORECASE,
+        )
         if re.search(r"riconosc|riconosco|sto guardando", question, re.IGNORECASE):
-            normalized += " Indicatore visivo dell'elemento selezionato."
+            normalized = re.sub(
+                r"come\s+riconosco", "come viene evidenziato", normalized, flags=re.IGNORECASE,
+            )
+            normalized = re.sub(
+                r"che\s+sto\s+guardando", "selezionato", normalized, flags=re.IGNORECASE,
+            )
         return normalized
 
     def answer(
@@ -622,7 +630,7 @@ class AnswerService:
             ]
             vectors = self.retriever._cached_vectors(contextual)
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
-            scores = _lexical_evidence_scores(question, contextual, scores)
+            scores = _lexical_evidence_scores(search_question, contextual, scores)
             ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
             direct = None
             requested_ids = set(IDENTIFIER_RE.findall(question.upper()))
