@@ -297,6 +297,29 @@ def _select_answer_sources(hits: list[SearchHit], ambiguity_margin: float) -> li
     return hits[:1]
 
 
+def _visual_indicator_selection(
+    question: str, excerpts: list[tuple[int, str]], scores: list[float]
+) -> list[int] | None:
+    if not re.search(r"riconosc|sto guardando", question, re.IGNORECASE):
+        return None
+    indicators = [
+        index for index, (_, text) in enumerate(excerpts)
+        if re.search(r"\b(?:riga|sfondo|colore|bordo)\b", text, re.IGNORECASE)
+        and scores[index] >= 0.5
+    ]
+    return [max(indicators, key=lambda index: scores[index]) + 1] if indicators else None
+
+
+def _price_value_supported(question: str, excerpts: list[tuple[int, str]]) -> bool:
+    if not re.search(r"quanto\s+costa|\bprezz[oi]\b|\bcosto\b", question, re.IGNORECASE):
+        return True
+    evidence = " ".join(text for _, text in excerpts)
+    return bool(re.search(
+        r"\d[\d., ]*\s*(?:€|euro|eur\b|dollari|usd\b)|[€$]\s*\d|gratuit\w*|senza\s+costo",
+        evidence, re.IGNORECASE,
+    ))
+
+
 def _term_features(text: str) -> set[str]:
     features: set[str] = set()
     for token in FTS_TOKEN_RE.findall(text.casefold()):
@@ -616,7 +639,10 @@ class AnswerService:
                     image_paths.append(candidate)
                     seen_images.add(hit.image_path)
 
-        if not excerpts or not _credential_value_supported(question, excerpts):
+        if (
+            not excerpts or not _credential_value_supported(question, excerpts)
+            or not _price_value_supported(question, excerpts)
+        ):
             return Answer(
                 text="Le fonti fornite non contengono questa informazione.", sources=[]
             )
@@ -632,7 +658,7 @@ class AnswerService:
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
             scores = _lexical_evidence_scores(search_question, contextual, scores)
             ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-            direct = None
+            direct = _visual_indicator_selection(question, excerpts, scores)
             requested_ids = set(IDENTIFIER_RE.findall(question.upper()))
             if requested_ids and re.search(r"\b(?:quali?|quali)\b.*(?:messaggi|codici)", question, re.IGNORECASE):
                 coded = [index for index in ranked

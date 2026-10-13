@@ -17,6 +17,7 @@ from manuali_rag.retrieval import (
     _has_named_control,
     _needs_clarification,
     _page_context,
+    _price_value_supported,
     _procedure_selection,
     _relevant_excerpt,
     _required_identifier,
@@ -25,6 +26,7 @@ from manuali_rag.retrieval import (
     _semantic_selection,
     _source_sentences,
     _strong_lexical_match,
+    _visual_indicator_selection,
 )
 from manuali_rag.store import ChunkInput, SearchHit, Store
 
@@ -616,3 +618,21 @@ def test_abstention_does_not_show_unrelated_sources(tmp_path: Path) -> None:
     )
     assert answer.text == "Le fonti fornite non contengono questa informazione."
     assert answer.sources == []
+
+
+def test_price_request_requires_a_monetary_value_or_explicit_free_access() -> None:
+    question = "Quanto costa la licenza del software?"
+    assert not _price_value_supported(question, [(1, "La licenza abilita l'accesso al software.")])
+    assert _price_value_supported(question, [(1, "La licenza costa 100 euro all'anno.")])
+    assert _price_value_supported(question, [(1, "La licenza è gratuita.")])
+    assert _price_value_supported("Come attivo la licenza?", [(1, "Premere Attiva.")])
+
+
+def test_visual_recognition_selects_appearance_instead_of_opening_instruction() -> None:
+    excerpts = [(1, "Aprire il pannello per vedere i dettagli."),
+                (1, "La riga selezionata presenta uno sfondo verde.")]
+    assert _visual_indicator_selection(
+        "Come riconosco l'elemento che sto guardando?", excerpts, [0.8, 0.65]
+    ) == [2]
+    assert _visual_indicator_selection("Come apro il pannello?", excerpts, [0.8, 0.65]) is None
+    assert _visual_indicator_selection("Come riconosco l'elemento?", excerpts, [0.1, 0.1]) is None
