@@ -69,10 +69,20 @@ Non è una prova grafica dei clic né uno scollegamento fisico di Wi-Fi/cavo; la
 mantiene la rete necessaria a SSH. La verifica pratica sul desktop resta da fare.
 I log permanenti sono consultabili con `journalctl -u manuali-rag -b`.
 
+## Collegamento desktop e prova pratica
+
+Installati **Manuali RAG.desktop** (eseguibile e attendibile) e **prova-offline.md** in
+`/home/michele/Desktop`, dal repository sincronizzato tramite GitHub. Installato anche
+il collegamento nel menu applicazioni in `~/.local/share/applications`.
+Il file `.desktop` è stato verificato con `desktop-file-validate`; usa `xdg-open` sulla
+pagina locale, senza avviare un nuovo server. Il browser predefinito è Firefox.
+Firefox è stato avviato nella sessione Wayland con la pagina locale e il servizio risponde.
+La prova fisica è stata proposta all'utente ed è **in attesa di conferma**, non dichiarata superata. La procedura è nella guida, sezione 13.
+
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** aggiungere un collegamento sul desktop alla pagina locale e fare
-   la prova pratica nel browser del Raspberry con rete fisicamente scollegata:
+1. **Consigliato:** completare e registrare la prova pratica nel browser del Raspberry
+   con rete fisicamente scollegata:
    domanda, apertura della pagina e importazione di un file locale. Lo scollegamento
    interrompe SSH, quindi quella parte richiede l'utente davanti al Raspberry.
 2. Ampliare il collaudo con altri manuali e domande.

@@ -20,7 +20,7 @@ disponibile; la prova con Wi-Fi/cavo fisicamente scollegati va distinta da quest
 
 ## 2. Promemoria rapido
 
-1. Sul Raspberry apri il browser su **http://127.0.0.1:8000**.
+1. Sul Raspberry fai doppio clic su **Manuali RAG** sul desktop, oppure apri il browser su **http://127.0.0.1:8000**.
 2. Se appare «Manuali locali», il RAG è già avviato: non avviarlo una seconda volta.
 3. Per aggiungere un manuale, scegli il file in **Importa un manuale** e premi
    **Importa e indicizza**. Aspetta la conferma prima di fare domande sul nuovo documento.
@@ -353,8 +353,8 @@ riservati nella guida o nella cronologia pubblica.
   Raspberry con Wi-Fi e cavo scollegati. La prova automatica isola i servizi dalla rete
   esterna mantenendo SSH disponibile, senza scollegare tutta la macchina.
 
-Il prossimo passaggio consigliato è rendere comodo l'accesso dal desktop del Raspberry
-con un collegamento alla pagina e provare l'uso nel browser con rete fisicamente scollegata.
+Il collegamento **Manuali RAG** è installato sul desktop e nel menu applicazioni.
+Il prossimo passaggio è confermare la prova nel browser con rete fisicamente scollegata.
 Le alternative sono ampliare i manuali e le domande di prova oppure aggiungere selettore
 dei manuali, gestione delle revisioni e accesso alla guida dall'interfaccia locale.
 
@@ -380,3 +380,33 @@ in un indice temporaneo. L'indice dei manuali personali resta invariato. Questa 
 controlla le risorse usate dai servizi; non simula i clic in un browser grafico e non
 scollega fisicamente il Raspberry dalla rete. Per quella verifica, apri il browser sul
 Raspberry, scollega Wi-Fi/cavo e prova domanda e pagina; SSH sarà indisponibile.
+
+
+## 13. Collegamento sul desktop e prova pratica senza rete
+
+Sul desktop del Raspberry sono disponibili **Manuali RAG** e **prova-offline.md**.
+Il collegamento apre la pagina locale con il browser predefinito; non avvia un secondo
+server. Se il desktop chiede come aprire il file `.desktop`, scegli l'esecuzione.
+Il collegamento è anche nel menu applicazioni. Per ricrearlo dalla copia del repository:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+desktop_dir=$(xdg-user-dir DESKTOP)
+install -m 755 deploy/manuali-rag.desktop "$desktop_dir/Manuali RAG.desktop"
+install -m 644 deploy/prova-offline.md "$desktop_dir/prova-offline.md"
+gio set "$desktop_dir/Manuali RAG.desktop" metadata::trusted true
+```
+
+Esegui la prova davanti al Raspberry:
+
+1. Scollega Ethernet se presente e disattiva il Wi-Fi dal desktop.
+2. Apri **Manuali RAG**. Fai una domanda QARA già collaudata e apri la pagina citata.
+3. Importa **prova-offline.md** dal desktop con **Importa e indicizza**.
+4. Chiedi «Che cosa indica OFFLINE-42?». La risposta attesa dice che la prova locale
+   è riuscita e cita il documento sintetico.
+5. Riattiva la rete e annota l'esito. Se l'IP cambia, comunicalo nella chat successiva.
+
+L'importazione aggiunge un documento sintetico all'indice principale, senza modificare
+QARA; ripetere lo stesso file non lo duplica. Non è disponibile la rimozione dall'interfaccia.
+Questa prova pratica va dichiarata superata solo dopo conferma dei passaggi; la precedente
+prova automatica con isolamento dei servizi resta un controllo distinto.
