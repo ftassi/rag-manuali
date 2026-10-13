@@ -74,6 +74,16 @@ class OpenAIEmbedder:
         self.client = client or httpx.Client(timeout=timeout)
 
     def embed(self, texts: Sequence[str]) -> list[list[float]]:
+        if self.model_name.startswith("nomic-embed-text"):
+            texts = [f"search_document: {text}" for text in texts]
+        return self._embed(texts)
+
+    def embed_query(self, text: str) -> list[float]:
+        if self.model_name.startswith("nomic-embed-text"):
+            text = f"search_query: {text}"
+        return self._embed([text])[0]
+
+    def _embed(self, texts: Sequence[str]) -> list[list[float]]:
         if not texts:
             return []
         response = self.client.post(
@@ -84,6 +94,11 @@ class OpenAIEmbedder:
         payload = response.json()
         ordered = sorted(payload["data"], key=lambda item: item["index"])
         return [normalize(item["embedding"]) for item in ordered]
+
+
+def embed_query(embedder: Embedder, text: str) -> list[float]:
+    method = getattr(embedder, "embed_query", None)
+    return method(text) if method is not None else embedder.embed([text])[0]
 
 
 def build_embedder(settings: Settings) -> Embedder:

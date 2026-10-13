@@ -7,7 +7,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from .config import Settings
-from .embeddings import Embedder
+from .embeddings import Embedder, embed_query
 from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
 
@@ -40,6 +40,8 @@ def _source_sentences(excerpt: str) -> list[str]:
         if re.match(r"^(?:Figura|Tabella)\s+\d", normalized, re.IGNORECASE):
             continue
         if re.match(r"^\d+(?:\.\d+)+\s+[^.!?]+$", normalized):
+            continue
+        if re.match(r"^\d+\s+[^a-zàèéìòù.!?]+$", normalized):
             continue
         if re.match(r"^\w+\s*[–-]\s*\d+(?:\.\d+)+(?:\s+[A-Z0-9]+)*$", normalized):
             continue
@@ -308,7 +310,7 @@ class Retriever:
         units = [(hit, text) for hit in hits for text in _source_sentences(hit.content)]
         if not units:
             return []
-        prefix = f"passage-v1:{self.embedder.model_name}:"
+        prefix = f"passage-v2:{self.embedder.model_name}:"
         keys = [prefix + hashlib.sha256(text.encode("utf-8")).hexdigest() for _, text in units]
         cached = self.store.passage_vectors(keys)
         missing = dict.fromkeys(key for key in keys if key not in cached)
@@ -321,7 +323,7 @@ class Retriever:
             new_rows.extend(zip(batch, vectors, strict=True))
         self.store.save_passage_vectors(new_rows)
         cached.update(dict(new_rows))
-        query = self.embedder.embed([question])[0]
+        query = embed_query(self.embedder, question)
         best: dict[int, float] = {}
         for (hit, _), key in zip(units, keys, strict=True):
             score = sum(a * b for a, b in zip(query, cached[key], strict=True))
@@ -348,7 +350,7 @@ class Retriever:
             for hit in self.store.get_hits([(chunk_id, 0.0) for chunk_id in lexical])
             if _strong_lexical_match(question, hit.content)
         ]
-        query_vector = self.embedder.embed([question])[0]
+        query_vector = embed_query(self.embedder, question)
         semantic_ranked = self.store.vector_candidates_with_scores(
             query_vector, candidate_limit, document_id=document_id
         )
@@ -466,10 +468,11 @@ class AnswerService:
         }
         selected = _procedure_selection(question, hits, excerpts)
         if selected is None and self.settings.embedding_provider == "openai" and not image_paths:
-            vectors = self.retriever.embedder.embed([question, *[text for _, text in excerpts]])
+            query = embed_query(self.retriever.embedder, question)
+            vectors = self.retriever.embedder.embed([text for _, text in excerpts])
             scores = [
-                sum(a * b for a, b in zip(vectors[0], vector, strict=True))
-                for vector in vectors[1:]
+                sum(a * b for a, b in zip(query, vector, strict=True))
+                for vector in vectors
             ]
             selected = _semantic_selection(
                 question, excerpts, scores, self.settings.answer_unit_min_similarity

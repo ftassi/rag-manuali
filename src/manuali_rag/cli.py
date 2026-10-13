@@ -39,6 +39,7 @@ def main() -> None:
     search_parser.add_argument("--top-k", type=int, default=5)
 
     subparsers.add_parser("documents", help="Elenca i manuali indicizzati")
+    subparsers.add_parser("reembed", help="Ricalcola i vettori locali senza reimportare i manuali")
 
     serve_parser = subparsers.add_parser("serve", help="Avvia API e interfaccia web")
     serve_parser.add_argument("--host", default="0.0.0.0")
@@ -54,7 +55,35 @@ def main() -> None:
     store, embedder, llm = _components(settings)
     retriever = Retriever(store, embedder, settings)  # type: ignore[arg-type]
 
-    if args.command == "ingest":
+    if args.command == "reembed":
+        import sqlite3
+        from datetime import UTC, datetime
+
+        with store.connect() as connection:
+            chunks = connection.execute("SELECT id, content FROM chunks ORDER BY id").fetchall()
+        vectors = []
+        for start in range(0, len(chunks), 16):
+            vectors.extend(embedder.embed([row["content"] for row in chunks[start:start + 16]]))
+        backup = settings.data_dir / "backups" / (
+            "before-reembed-" + datetime.now(UTC).strftime("%Y%m%dT%H%M%S%fZ") + ".sqlite3"
+        )
+        backup.parent.mkdir(parents=True, exist_ok=True)
+        with store.connect() as connection, sqlite3.connect(backup) as destination:
+            connection.backup(destination)
+        from .embeddings import vector_to_blob
+
+        with store.connect() as connection:
+            connection.execute("BEGIN IMMEDIATE")
+            current = connection.execute("SELECT id, content FROM chunks ORDER BY id").fetchall()
+            if [tuple(row) for row in current] != [tuple(row) for row in chunks]:
+                raise RuntimeError("Indice modificato durante il calcolo: ripetere reembed")
+            connection.executemany(
+                "UPDATE embeddings SET model=?, dimensions=?, vector=? WHERE chunk_id=?",
+                [(embedder.model_name, len(vector), vector_to_blob(vector), row["id"])
+                 for row, vector in zip(chunks, vectors, strict=True)],
+            )
+        print(json.dumps({"chunks": len(chunks), "backup": str(backup)}))
+    elif args.command == "ingest":
         result = Ingestor(settings, store, embedder, llm).ingest(  # type: ignore[arg-type]
             args.path, force=args.force
         )
