@@ -1,14 +1,17 @@
 [Unit]
 Description=Manuali RAG API
-After=network.target
+After=ollama.service
+Wants=ollama.service
 
 [Service]
 Type=simple
-User=pi
-Group=pi
-WorkingDirectory=/opt/manuali-rag
-EnvironmentFile=/opt/manuali-rag/.env
-ExecStart=/opt/manuali-rag/.venv/bin/manuali-rag serve --host 0.0.0.0 --port 8000
+User=michele
+Group=michele
+WorkingDirectory=/home/michele/progetti/rag-manuali
+Environment=PYTHONIOENCODING=utf-8
+EnvironmentFile=-/home/michele/progetti/rag-manuali/.env
+ExecStart=/home/michele/progetti/rag-manuali/.venv/bin/manuali-rag serve --host 127.0.0.1 --port 8000
+Slice=manuali-local.slice
 Restart=on-failure
 RestartSec=5
 MemoryHigh=6500M

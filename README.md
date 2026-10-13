@@ -306,16 +306,23 @@ La documentazione OpenAPI è disponibile su `/docs`.
 
 ## Deploy come servizio
 
-Il file [deploy/manuali-rag.service](deploy/manuali-rag.service) è un esempio systemd. Adattare
-utente e percorso, poi installarlo:
+Il file [deploy/manuali-rag.service](deploy/manuali-rag.service) usa l'utente `michele`
+e il percorso verificato sul Raspberry. Adattarli per altre installazioni.
+La slice comune limita RAG e Ollama alle connessioni locali tramite il filtro IP di systemd
+(richiede supporto BPF del kernel). Verificare che la porta 8000 sia libera, poi installare:
 
 ```bash
-sudo cp deploy/manuali-rag.service /etc/systemd/system/
+sudo install -m 644 deploy/manuali-rag.service deploy/manuali-local.slice /etc/systemd/system/
+sudo install -d /etc/systemd/system/ollama.service.d
+sudo install -m 644 deploy/ollama-local.conf /etc/systemd/system/ollama.service.d/manuali-local.conf
 sudo systemctl daemon-reload
+sudo systemctl restart ollama
 sudo systemctl enable --now manuali-rag
 ```
 
-Il servizio Ollama deve essere avviato prima dell'applicazione.
+Il servizio RAG richiede l'avvio di Ollama e ascolta su `127.0.0.1:8000`.
+Per stato e log usare `systemctl status manuali-rag` e `journalctl -u manuali-rag`.
+La limitazione di rete riguarda questi servizi, senza interrompere SSH o il resto del sistema.
 
 ## Test
 

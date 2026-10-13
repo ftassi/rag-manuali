@@ -1,0 +1,6 @@
+[Unit]
+Description=RAG and Ollama local network only
+
+[Slice]
+IPAddressDeny=any
+IPAddressAllow=localhost
