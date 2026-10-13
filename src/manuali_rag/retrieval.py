@@ -277,11 +277,7 @@ def _term_features(text: str) -> set[str]:
 
 def _lexical_evidence_scores(question: str, texts: list[str], scores: list[float]) -> list[float]:
     def roots(text: str) -> set[str]:
-        return {
-            token[:5] if len(token) >= 6 and token.isalpha() else token
-            for token in FTS_TOKEN_RE.findall(text.casefold())
-            if token not in FTS_STOPWORDS and len(token) > 2
-        }
+        return _term_features(text)
 
     features = roots(question)
     documents = [roots(text) for text in texts]
@@ -467,6 +463,7 @@ class Retriever:
         ranked = sorted(fused.items(), key=lambda item: item[1], reverse=True)
         hits = self.store.get_hits(ranked, semantic_scores)
         if self.settings.embedding_provider == "openai":
+            hits = self.store.all_hits(document_id)
             passages = self.passage_ranked(question, hits)
             retained = passages[:max(1, top_k - 3)]
             by_id = {hit.chunk_id: hit for hit in passages}

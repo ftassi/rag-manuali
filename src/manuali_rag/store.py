@@ -12,6 +12,12 @@ from .embeddings import blob_to_vector, vector_to_blob
 
 FTS_TOKEN_RE = re.compile(r"[^\W_]+", re.UNICODE)
 FTS_STOPWORDS = {
+    "ho",
+    "fatto",
+    "voglio",
+    "sto",
+    "perché",
+    "perche",
     # Verbi di supporto della domanda: l'argomento è "login", "firma", ecc.
     # Le forme coniugate devono essere trattate come gli infiniti già esclusi.
     "faccio",
@@ -337,6 +343,16 @@ class Store:
                 params,
             ).fetchall()
         return [int(row["id"]) for row in rows]
+
+    def all_hits(self, document_id: str | None = None) -> list[SearchHit]:
+        with self.connect() as connection:
+            rows = connection.execute(
+                "SELECT id FROM chunks "
+                + ("WHERE document_id = ? " if document_id else "")
+                + "ORDER BY document_id, page, id",
+                (document_id,) if document_id else (),
+            ).fetchall()
+        return self.get_hits([(row["id"], 0.0) for row in rows])
 
     def vector_candidates(
         self,
