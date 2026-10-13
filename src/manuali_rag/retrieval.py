@@ -66,8 +66,10 @@ def _source_sentences(excerpt: str) -> list[str]:
             continue
         # Una procedura numerata deve mantenere insieme i passi, non solo il più simile.
         if re.match(r"^\d+\.\s+", normalized):
-            sentences.append(normalized)
-            continue
+            if re.search(r"\s+\d+\.\s+[A-Z]", normalized):
+                sentences.append(normalized)
+                continue
+            normalized = re.sub(r"^\d+\.\s+", "", normalized)
         for item in re.split(r"\s+(?=[•◼➢]|\d+\.\s+[A-Z])", normalized):
             item = re.sub(r"^\d+\.\s+", "", item)
             sentences.extend(
@@ -129,7 +131,8 @@ def _selected_quotes(text: str, excerpts: list[tuple[int, str]]) -> list[int] | 
     for quote in payload["quotes"]:
         if not isinstance(quote, str):
             return None
-        matches = [index for index, (_, value) in enumerate(excerpts, start=1) if quote == value]
+        matches = [index for index, (_, value) in enumerate(excerpts, start=1)
+                   if quote in {value, value.lstrip("•◼➢❖▪ ")}]
         if not matches:
             return None
         selected.append(matches[0])
@@ -168,14 +171,19 @@ def _complete_paragraph_selection(
     for source, hit in enumerate(hits, start=1):
         for block in hit.content.split("\n\n"):
             normalized = " ".join(block.split())
-            if len(normalized) > 450 or len(re.findall(r"[•◼➢❖▪]", normalized)) > 1:
+            if len(re.findall(r"[•◼➢❖▪]", normalized)) > 1:
                 continue
             values = _source_sentences(block)
             indices = [
                 index for index, (number, text) in enumerate(excerpts, start=1)
                 if number == source and text in values
             ]
-            if len(indices) <= 5 and completed.intersection(indices):
+            if len(normalized) > 450:
+                permissions = [index for index in indices
+                               if re.search(r"abilitat|consent|permess", excerpts[index - 1][1], re.IGNORECASE)]
+                if completed.intersection(permissions):
+                    completed.update(permissions)
+            elif len(indices) <= 5 and completed.intersection(indices):
                 completed.update(indices)
     return sorted(completed)
 
@@ -651,7 +659,7 @@ class AnswerService:
             ),
         }
         if semantic:
-            values = [excerpts[index - 1][1] for index in candidates]
+            values = [excerpts[index - 1][1].lstrip("•◼➢❖▪ ") for index in candidates]
             prompt = (
                 "PASSAGGI:\n" + "\n".join(evidence_lines) + f"\nDOMANDA: {question}\n"
                 "Copia nel campo quotes solo i testi dei passaggi che rispondono alla domanda. "
@@ -699,6 +707,11 @@ class AnswerService:
                 f"Correggi questa selezione: {raw}\n"
                 'Restituisci esclusivamente JSON con il campo "extracts" e numeri validi.'
             )
+            if semantic:
+                correction = (
+                    prompt + "\nCopia esattamente il testo di un passaggio, senza aggiunte. "
+                    'Restituisci solo JSON con quotes, oppure {"quotes": []}.'
+                )
             raw = self.llm.complete(user_text=correction, **output_options)
             if semantic:
                 selected = _selected_quotes(raw, excerpts)
