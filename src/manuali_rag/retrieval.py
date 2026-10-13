@@ -82,7 +82,11 @@ def _complete_list_selection(selected: list[int], excerpts: list[tuple[int, str]
             continue
         # Le alternative configurabili e i campi obbligatori non sono scelte esclusive.
         if "configur" in context.casefold() or "obbligator" in context.casefold():
-            completed.update([offset + 1, *children])
+            if re.search(r"accedere.*liste", context, re.IGNORECASE):
+                # Una lista di menu richiede il comando introduttivo e la voce scelta.
+                completed.add(offset + 1)
+            else:
+                completed.update([offset + 1, *children])
     return sorted(completed)
 
 
@@ -213,10 +217,8 @@ def _strong_lexical_match(question: str, content: str) -> bool:
     )
 
 
-def _relevant_excerpt(content: str, question: str, max_blocks: int = 3) -> str:
+def _focused_section(content: str, question: str) -> str | None:
     blocks = [block.strip() for block in content.split("\n\n") if block.strip()]
-    if len(blocks) <= max_blocks:
-        return content
     question_features = _term_features(question)
     # Le parole della domanda possono comparire solo nell'intestazione della procedura.
     # In quel caso servono i paragrafi successivi, non la sola intestazione o didascalia.
@@ -232,6 +234,29 @@ def _relevant_excerpt(content: str, question: str, max_blocks: int = 3) -> str:
                     break
                 end += 1
             return "\n\n".join(blocks[index:end])
+    return None
+
+
+def _procedure_selection(
+    question: str, hits: list[SearchHit], excerpts: list[tuple[int, str]]
+) -> list[int] | None:
+    if not re.search(r"\bcome\b", question, re.IGNORECASE):
+        return None
+    for source, hit in enumerate(hits, start=1):
+        focused = _focused_section(hit.content, question)
+        if focused and re.search(r"(?:^|\s)1\.\s", focused):
+            return [index for index, (number, _) in enumerate(excerpts, start=1) if number == source]
+    return None
+
+
+def _relevant_excerpt(content: str, question: str, max_blocks: int = 3) -> str:
+    blocks = [block.strip() for block in content.split("\n\n") if block.strip()]
+    if len(blocks) <= max_blocks:
+        return content
+    question_features = _term_features(question)
+    focused = _focused_section(content, question)
+    if focused is not None:
+        return focused
     ranked = sorted(
         (
             (len(question_features & _term_features(block)), index)
@@ -385,8 +410,8 @@ class AnswerService:
                 "array di numeri interi."
             ),
         }
-        selected = None
-        if self.settings.embedding_provider == "openai" and not image_paths:
+        selected = _procedure_selection(question, hits, excerpts)
+        if selected is None and self.settings.embedding_provider == "openai" and not image_paths:
             vectors = self.retriever.embedder.embed([question, *[text for _, text in excerpts]])
             scores = [
                 sum(a * b for a, b in zip(vectors[0], vector, strict=True))

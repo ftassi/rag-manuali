@@ -10,6 +10,7 @@ from manuali_rag.retrieval import (
     _complete_list_selection,
     _credential_value_supported,
     _grounded_answer,
+    _procedure_selection,
     _relevant_excerpt,
     _required_identifier,
     _select_answer_sources,
@@ -324,6 +325,20 @@ def test_conversational_query_finds_procedure_and_instructions() -> None:
     assert "Premere Entra" in excerpt
     assert "Selezionare il contesto" in excerpt
     assert "Altre funzioni" not in excerpt
+
+
+def test_named_procedure_uses_all_steps_without_semantic_threshold() -> None:
+    hit = _hit(1, 0.3)
+    hit.content = "2.1 Login\n\n1. Inserire credenziale.\n2. Premere Entra."
+    excerpts = [(1, "Inserire credenziale."), (1, "Premere Entra.")]
+    assert _procedure_selection("Come posso fare il login?", [hit], excerpts) == [1, 2]
+    assert _procedure_selection("Come firmare il documento?", [hit], excerpts) is None
+
+
+def test_menu_selection_keeps_instruction_without_other_menu_items() -> None:
+    excerpts = [(1, "In base alla configurazione è possibile accedere a diverse liste:"),
+                (1, "◼ Elementi aperti"), (1, "◼ Elementi archiviati")]
+    assert _complete_list_selection([3], excerpts) == [1, 3]
 
 
 def test_configurable_list_preserves_both_options_and_context() -> None:
