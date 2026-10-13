@@ -221,14 +221,17 @@ def _relevant_excerpt(content: str, question: str, max_blocks: int = 3) -> str:
     # Le parole della domanda possono comparire solo nell'intestazione della procedura.
     # In quel caso servono i paragrafi successivi, non la sola intestazione o didascalia.
     for index, block in enumerate(blocks):
-        if re.fullmatch(r"\d+(?:\.\d+)+\s+[^.!?]+", " ".join(block.split())):
-            if question_features and question_features <= _term_features(block):
-                end = index + 1
-                while end < len(blocks) and end < index + 7:
-                    if re.match(r"^\d+(?:\.\d+)+\s+", blocks[end]):
-                        break
-                    end += 1
-                return "\n\n".join(blocks[index:end])
+        if (
+            re.fullmatch(r"\d+(?:\.\d+)+\s+[^.!?]+", " ".join(block.split()))
+            and question_features
+            and question_features <= _term_features(block)
+        ):
+            end = index + 1
+            while end < len(blocks) and end < index + 7:
+                if re.match(r"^\d+(?:\.\d+)+\s+", blocks[end]):
+                    break
+                end += 1
+            return "\n\n".join(blocks[index:end])
     ranked = sorted(
         (
             (len(question_features & _term_features(block)), index)
