@@ -35,6 +35,8 @@ def _has_named_control(question: str, content: str) -> bool:
             r"([A-ZÀ-Ý][\w’'-]+(?:\s+[\w’'-]+){1,3})", text,
         ):
             words = match.group(1).split()
+            if words[0].casefold() in FTS_STOPWORDS | {"si", "dopo", "prima"}:
+                continue
             for length in range(2, len(words) + 1):
                 label = " ".join(words[:length]).casefold()
                 if words[length - 1].casefold() not in FTS_STOPWORDS and label in query:

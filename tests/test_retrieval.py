@@ -14,6 +14,7 @@ from manuali_rag.retrieval import (
     _complete_paragraph_selection,
     _credential_value_supported,
     _grounded_answer,
+    _has_named_control,
     _needs_clarification,
     _page_context,
     _procedure_selection,
@@ -389,6 +390,17 @@ def test_quote_selection_rejects_added_words_and_inverted_negation() -> None:
     assert _selected_quotes('{"quotes": []}', excerpts) == []
     assert _selected_quotes('{"quotes": ["È possibile modificare il documento."]}', excerpts) is None
     assert _selected_quotes('{"quotes": [1]}', excerpts) is None
+
+
+def test_bullet_context_is_not_mistaken_for_a_named_control() -> None:
+    assert not _has_named_control(
+        "In Planner voglio filtrare le attività.",
+        "➢ In Planner sono visibili tutte le attività.",
+    )
+    assert _has_named_control(
+        "A cosa serve Ripristina versione?",
+        "• Ripristina versione: ripristina il contenuto precedente.",
+    )
 
 
 def test_paragraph_completion_keeps_conditions_but_not_other_controls() -> None:
