@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -239,6 +240,28 @@ def _term_features(text: str) -> set[str]:
     return features
 
 
+def _lexical_evidence_scores(question: str, texts: list[str], scores: list[float]) -> list[float]:
+    def roots(text: str) -> set[str]:
+        return {
+            token[:5] if len(token) >= 6 and token.isalpha() else token
+            for token in FTS_TOKEN_RE.findall(text.casefold())
+            if token not in FTS_STOPWORDS and len(token) > 2
+        }
+
+    features = roots(question)
+    documents = [roots(text) for text in texts]
+    weights = {
+        term: math.log((len(texts) + 1) / (1 + sum(term in doc for doc in documents))) + 1
+        for term in features
+        if any(term in doc for doc in documents)
+    }
+    total = sum(weights.values()) or 1.0
+    return [
+        score + 0.30 * sum(weight for term, weight in weights.items() if term in doc) / total
+        for score, doc in zip(scores, documents, strict=True)
+    ]
+
+
 def _strong_lexical_match(question: str, content: str) -> bool:
     identifiers = set(IDENTIFIER_RE.findall(question.upper()))
     if identifiers & set(IDENTIFIER_RE.findall(content.upper())):
@@ -332,27 +355,31 @@ class Retriever:
         self.embedder = embedder
         self.settings = settings
 
+    def _cached_vectors(self, texts: list[str]) -> list[list[float] | tuple[float, ...]]:
+        prefix = f"passage-v2:{self.embedder.model_name}:"
+        keys = [prefix + hashlib.sha256(text.encode("utf-8")).hexdigest() for text in texts]
+        cached = self.store.passage_vectors(keys)
+        text_by_key = dict(zip(keys, texts, strict=True))
+        missing = [key for key in dict.fromkeys(keys) if key not in cached]
+        for start in range(0, len(missing), 32):
+            batch = missing[start:start + 32]
+            vectors = self.embedder.embed([text_by_key[key] for key in batch])
+            rows = list(zip(batch, vectors, strict=True))
+            self.store.save_passage_vectors(rows)
+            cached.update(dict(rows))
+        return [cached[key] for key in keys]
+
     def passage_ranked(self, question: str, hits: list[SearchHit]) -> list[SearchHit]:
         units = [(hit, text) for hit in hits for text in _source_sentences(hit.content)]
         if not units:
             return []
-        prefix = f"passage-v2:{self.embedder.model_name}:"
-        keys = [prefix + hashlib.sha256(text.encode("utf-8")).hexdigest() for _, text in units]
-        cached = self.store.passage_vectors(keys)
-        missing = dict.fromkeys(key for key in keys if key not in cached)
-        text_by_key = dict(zip(keys, [text for _, text in units], strict=True))
-        new_rows = []
-        missing_keys = list(missing)
-        for start in range(0, len(missing_keys), 32):
-            batch = missing_keys[start:start + 32]
-            vectors = self.embedder.embed([text_by_key[key] for key in batch])
-            new_rows.extend(zip(batch, vectors, strict=True))
-        self.store.save_passage_vectors(new_rows)
-        cached.update(dict(new_rows))
+        texts = [text for _, text in units]
+        vectors = self._cached_vectors(texts)
         query = embed_query(self.embedder, question)
+        scores = [sum(a * b for a, b in zip(query, vector, strict=True)) for vector in vectors]
+        scores = _lexical_evidence_scores(question, texts, scores)
         best: dict[int, float] = {}
-        for (hit, _), key in zip(units, keys, strict=True):
-            score = sum(a * b for a, b in zip(query, cached[key], strict=True))
+        for (hit, _), score in zip(units, scores, strict=True):
             best[hit.chunk_id] = max(best.get(hit.chunk_id, -1.0), score)
         # Una procedura nominata esplicitamente mantiene priorità rispetto a sinonimi generici.
         for hit in hits:
@@ -459,9 +486,13 @@ class AnswerService:
         search_question = self._search_question(question)
         semantic = self.settings.embedding_provider == "openai"
         hits = self.retriever.search(
-            search_question, top_k=max(top_k or 5, 8) if semantic else top_k,
+            question, top_k=max(top_k or 5, 8) if semantic else top_k,
             document_id=document_id,
         )
+        if semantic and search_question != question:
+            extra = self.retriever.search(search_question, top_k=8, document_id=document_id)
+            seen = {hit.chunk_id for hit in hits}
+            hits.extend(hit for hit in extra if hit.chunk_id not in seen)
         if not hits:
             return Answer(
                 text="Non ho trovato informazioni pertinenti nei manuali indicizzati.",
@@ -505,10 +536,12 @@ class AnswerService:
         scores = []
         if semantic and not image_paths:
             query = embed_query(self.retriever.embedder, search_question)
-            vectors = self.retriever.embedder.embed([text for _, text in excerpts])
+            texts = [text for _, text in excerpts]
+            vectors = self.retriever._cached_vectors(texts)
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
+            scores = _lexical_evidence_scores(question, texts, scores)
             nearest = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:10]
-            candidates = sorted(set(candidates[:4]) | {index + 1 for index in nearest})
+            candidates = sorted(set(candidates) | {index + 1 for index in nearest})
         prompt = (
             f"DOMANDA: {question}\nRICERCA: {search_question}\nPASSAGGI:\n"
             + "\n".join(f"[F{index}] {excerpts[index - 1][1]}" for index in candidates)
