@@ -9,6 +9,8 @@ import time
 from datetime import UTC, datetime
 from pathlib import Path
 
+import httpx
+
 from manuali_rag.cli import _components
 from manuali_rag.config import Settings
 from manuali_rag.retrieval import AnswerService, Retriever
@@ -18,6 +20,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
+    parser.add_argument("--api-url", help="Collauda il servizio HTTP, incluse le pagine citate")
     args = parser.parse_args()
     cases = json.loads(args.cases.read_text(encoding="utf-8"))["cases"]
     if not cases:
@@ -32,25 +35,50 @@ def main() -> None:
         if not expected_pages and not case.get("expect_abstention", False):
             raise ValueError(f"Specificare pagine attese o astensione per {case['id']}")
         started = time.perf_counter()
-        answer = service.answer(
-            case["question"], document_id=case.get("document_id"), include_images=False
-        )
-        normalized = answer.text.casefold()
-        pages = [source.page for source in answer.sources]
+        images_ok = None
+        if args.api_url:
+            with httpx.Client(base_url=args.api_url, timeout=settings.llm_timeout + 120) as client:
+                response = client.post("/api/questions", json={
+                    "question": case["question"],
+                    "document_id": case.get("document_id"),
+                    "include_images": True,
+                })
+                response.raise_for_status()
+                payload = response.json()
+                answer_text = payload["answer"]
+                pages = [source["page"] for source in payload["sources"]]
+                source_count = len(payload["sources"])
+                images_ok = True
+                for source in payload["sources"]:
+                    if not source.get("page_url"):
+                        images_ok = False
+                        continue
+                    image = client.get(source["page_url"])
+                    images_ok = images_ok and image.is_success and image.headers.get(
+                        "content-type", ""
+                    ).startswith("image/")
+        else:
+            answer = service.answer(
+                case["question"], document_id=case.get("document_id"), include_images=False
+            )
+            answer_text = answer.text
+            pages = [source.page for source in answer.sources]
+            source_count = len(answer.sources)
+        normalized = answer_text.casefold()
         if case.get("expect_abstention", False):
-            facts_ok = answer.text in {
+            facts_ok = answer_text in {
                 "Le fonti fornite non contengono questa informazione.",
                 "Non ho trovato informazioni pertinenti nei manuali indicizzati.",
             }
-            sources_ok = not answer.sources
+            sources_ok = not source_count
             citations_ok = True
         else:
             facts_ok = all(term.casefold() in normalized for term in case["required_terms"])
             sources_ok = bool(set(pages) & set(expected_pages)) and all(
                 page in expected_pages for page in pages
             )
-            citations_ok = bool(answer.sources) and all(
-                f"[S{index}]" in answer.text for index in range(1, len(answer.sources) + 1)
+            citations_ok = bool(source_count) and all(
+                f"[S{index}]" in answer_text for index in range(1, source_count + 1)
             )
         extra = [
             term for term in case.get("forbidden_terms", []) if term.casefold() in normalized
@@ -62,13 +90,14 @@ def main() -> None:
             "required_terms": case.get("required_terms", []),
             "forbidden_terms": case.get("forbidden_terms", []),
             "expect_abstention": case.get("expect_abstention", False),
-            "answer": answer.text,
+            "answer": answer_text,
             "selected_pdf_pages": pages,
             "facts_ok": facts_ok,
             "sources_ok": sources_ok,
             "citations_ok": citations_ok,
             "extraneous": extra,
-            "passed": facts_ok and sources_ok and citations_ok and not extra,
+            "images_ok": images_ok,
+            "passed": facts_ok and sources_ok and citations_ok and not extra and images_ok is not False,
             "wall_seconds": round(time.perf_counter() - started, 3),
         }
         results.append(result)
@@ -77,6 +106,7 @@ def main() -> None:
         "timestamp_utc": datetime.now(UTC).isoformat(),
         "code_commit": commit,
         "cases_file": str(args.cases.resolve()),
+        "api_url": args.api_url,
         "cases": results,
         "passed": sum(result["passed"] for result in results),
         "total": len(results),
