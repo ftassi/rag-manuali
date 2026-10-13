@@ -6,7 +6,37 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
-## Stato completato e verificato
+## Correzione di recupero e ambiguità — codice `ff00bfc`
+
+Il recupero confronta il catalogo completo dei passaggi con titoli e didascalie reali,
+conserva il soggetto e l'azione delle domande colloquiali e completa condizioni,
+alternative e liste obbligatorie. Le richieste prive di soggetto ricevono un chiarimento
+senza fonti. Le informazioni assenti richiedono astensione; i prezzi devono avere un
+riscontro economico esplicito. Le indicazioni visive vengono distinte dalle istruzioni
+per aprire una schermata. Nessun caso privato è stato aggiunto come risposta predefinita.
+
+Ollama resta locale con `llama3.2:3b` e `nomic-embed-text-v2-moe`. Corretti i prefissi
+Nomic per query e documenti; ricalcolati i 228 vettori dell'indice con backup SQLite,
+conservando documenti, chunk e pagine. Aggiunta cache locale dei passaggi. Il confronto
+sperimentale con `qwen2.5:1.5b` non ha giustificato il cambio del modello di risposta.
+Lint e **62 test** superati sul Raspberry sul commit `ff00bfc`.
+Collaudo completo via API: **47/47** (23 casi precedenti più 24 spontanei),
+con **41/41 positivi**, **4/4 informazioni assenti**, **2/2 chiarimenti per ambiguità**.
+Tutti i positivi hanno superato anche fatti, citazioni, pagine e disponibilità immagini.
+Report privato `data/evaluations/qara-all-verified-2026-10-13.json`; criteri nel file
+`data/evaluations/qara-all-cases-2026-10-13.json`. Conservati i giri intermedi falliti.
+L'indice contiene ancora due documenti e 228 chunk; i manuali non sono pubblicati.
+Regressione sintetica **11/11**, HTTP **6/6**, `make health` e `make ollama-check`
+superati. Provati interfaccia, domanda QARA e immagine citata nella slice
+`manuali-local.slice`: il kernel rifiuta l'accesso esterno con EPERM, mentre le
+richieste locali funzionano. Nessuna nuova disconnessione fisica Wi-Fi o riavvio
+in questo passaggio; resta valida la precedente prova personale dell'utente.
+Report sintetico `/tmp/qara-final-e2e.json` sul Raspberry; entrambi i servizi attivi,
+nella slice locale, senza riavvii automatici dopo l'ultimo riavvio del servizio.
+
+
+
+## Verifiche precedenti (storico)
 
 Il codice verificato è `df7469e`; `fac3bfc` aggiorna la guida con gli esiti.
 Le correzioni separano intestazioni e istruzioni, completano le liste e le alternative,
@@ -141,11 +171,13 @@ I 23/23 casi precedenti non vanno estesi alle nuove formulazioni, che mostrano l
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** correggere recupero/scelta dei passaggi per le parafrasi e richieste
-   ambigue; ripetere i 24 nuovi casi e i 23 precedenti, con testo e immagini.
-2. Raccogliere altre domande spontanee dell'utente e aggiungerle ai criteri privati.
-3. Aggiungere il selettore dei manuali, tenendo presente che non corregge la confusione
-   tra sezioni dello stesso documento.
+1. **Consigliato:** prova personale nel browser del Raspberry con Wi-Fi disattivato,
+   nuove domande spontanee e verifica di testo e pagina; aggiornare con `Ctrl+Shift+R`.
+2. Importare e collaudare un secondo manuale, controllando le risposte tra documenti.
+3. Aggiungere il selettore dei manuali per limitare esplicitamente la ricerca.
+
+Le correzioni richieste e la ripetizione dei 47 casi sono completate; le opzioni
+successive servono ad ampliare la verifica e l'uso, non a sostituire l'esito storico.
 
 ## Come riprendere lo sviluppo
 

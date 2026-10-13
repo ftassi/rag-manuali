@@ -179,20 +179,24 @@ I pesi predefiniti sono bilanciati (`semantic=1.0`, `lexical=1.0`, `rrf_k=60`) e
 modificati con `MANUALI_RETRIEVAL_SEMANTIC_WEIGHT`, `MANUALI_RETRIEVAL_LEXICAL_WEIGHT` e
 `MANUALI_RETRIEVAL_RRF_K`.
 
-Per limitare la contaminazione, la generazione usa normalmente la prima fonte e include la
-seconda solo quando la differenza assoluta di similarità è al massimo
-`MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02` e il punteggio ibrido della seconda dista
-al massimo del 2% da quello della prima (con il margine predefinito).
+Con gli embedding Ollama la ricerca confronta il catalogo completo dei passaggi,
+con i titoli di sezione e le didascalie reali come contesto. I vettori dei passaggi sono
+memorizzati in una cache SQLite locale, distinta dai chunk: non cambiano documenti,
+pagine o citazioni. Il primo uso dopo un aggiornamento può richiedere più tempo.
+Nomic usa `search_query:` per le domande e `search_document:` per i documenti,
+come indicato nella [documentazione del modello](https://huggingface.co/nomic-ai/nomic-embed-text-v2-moe).
 
-Le risposte riportano estratti delle fonti. Il programma confronta la domanda con le singole
-frasi tramite gli embedding locali e seleziona i casi sufficientemente simili; nei casi ambigui
-`llama3.2:3b` seleziona frasi numerate. Il programma mostra sempre testo originale e citazione.
-La soglia della selezione diretta è `MANUALI_ANSWER_UNIT_MIN_SIMILARITY=0.50`, verificata con
-`nomic-embed-text-v2-moe`; cambiare modello richiede un nuovo collaudo. Le alternative di una
-lista configurabile e i campi di una lista obbligatoria vengono conservati insieme al contesto.
-Se il modello
-restituisce una selezione non valida, il sistema richiede una correzione; se anche questa non è
-verificabile, mostra un messaggio di mancata verifica e le pagine da consultare.
+Le richieste senza un argomento concreto ricevono una domanda di chiarimento senza fonti.
+Le risposte riportano testo originale: procedure nominate, liste obbligatorie e passaggi
+completi fortemente pertinenti vengono selezionati dal programma; nei casi incerti
+`llama3.2:3b` sceglie fra poche citazioni esatte. La selezione diretta richiede sia un punteggio
+almeno `MANUALI_ANSWER_UNIT_MIN_SIMILARITY=0.70` sia copertura lessicale del soggetto.
+Il punteggio combina similarità e corrispondenza dei termini nel contesto, non è una probabilità.
+`MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02` limita l'aggiunta di fonti meno pertinenti.
+Condizioni e alternative necessarie vengono conservate, mentre altre voci di menu non
+sono incluse automaticamente. Il fallback hash mantiene la selezione ibrida dei chunk.
+Se il modello restituisce testi non presenti fra i passaggi offerti, il sistema richiede
+una correzione e poi segnala la mancata verifica.
 Questo controllo impedisce testo aggiunto, ma non garantisce che il modello scelga tutti
 i passaggi necessari o interpreti correttamente quale risponde alla domanda.
 
@@ -339,3 +343,21 @@ La limitazione di rete riguarda questi servizi, senza interrompere SSH o il rest
 - un Markdown caricato via browser non può includere automaticamente le immagini adiacenti;
 - una pagina puramente illustrata è recuperabile meglio se `MANUALI_CAPTION_MODE=visual`;
 - la qualità va misurata con domande italiane reali e con le quantizzazioni effettivamente usate.
+
+
+### Aggiornamento dei vettori di un indice esistente
+
+Dopo un cambiamento del modello embedding o dei prefissi delle richieste, eseguire sul
+Raspberry (con il RAG fermo):
+
+```bash
+cd /home/michele/progetti/rag-manuali
+sudo systemctl stop manuali-rag
+.venv/bin/manuali-rag reembed
+sudo systemctl start manuali-rag
+```
+
+`reembed` calcola i vettori prima dell'aggiornamento e crea un backup SQLite in
+`data/backups/`. Mantiene i chunk, le pagine, i documenti e i riferimenti; rifiuta l'aggiornamento
+se il contenuto dell'indice è cambiato durante il calcolo. Non serve reimportare il PDF.
+Questa manutenzione usa i modelli già disponibili localmente.

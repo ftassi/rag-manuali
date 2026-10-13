@@ -497,7 +497,57 @@ PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
   --api-url http://127.0.0.1:8000
 ```
 
-Il prossimo intervento consigliato è migliorare recupero e scelta dei passaggi per le
-parafrasi, gestire le richieste senza argomento e ripetere sia questi 24 casi sia i 23
-precedenti. Le alternative sono raccogliere altre domande reali o aggiungere il selettore
-dei manuali; quest'ultimo non risolve gli errori tra sezioni dello stesso QARA.
+I limiti di questo giro sono stati affrontati nel passaggio successivo, documentato
+nella sezione 15. Questo esito resta conservato come riferimento storico.
+
+
+## 15. Recupero dei passaggi e richieste ambigue
+
+La ricerca conserva il soggetto e l'operazione della domanda, confronta i passaggi
+con titoli e didascalie reali e mantiene insieme condizioni, campi obbligatori e
+alternative necessarie. Le risposte usano testo del manuale con citazioni e pagine
+visualizzabili. Una richiesta senza soggetto, come un generico invito ad aprire
+qualcosa, riceve una domanda di chiarimento: specificare la funzione o schermata.
+Se l'informazione manca, il sistema deve dichiararlo senza inventare istruzioni.
+
+Il modello di risposta resta `llama3.2:3b`, eseguito da Ollama sul Raspberry.
+Anche gli embedding e la cache dei passaggi restano locali. Il primo uso dopo
+una modifica può essere più lento mentre si completa la cache. Non bisogna
+ricaricare i manuali per ogni domanda. I vettori dell'indice sono stati aggiornati
+con i prefissi richiesti da Nomic, conservando documenti e pagine e creando un
+backup SQLite locale; per la manutenzione consultare `reembed` nel README.
+
+I casi precedenti e spontanei sono riuniti in un collaudo privato di 47 domande.
+Per ripeterlo sul servizio in esecuzione, conservando i risultati precedenti:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
+  --cases data/evaluations/qara-all-cases-2026-10-13.json \
+  --output data/evaluations/qara-all-next.json \
+  --api-url http://127.0.0.1:8000
+```
+
+Il controllo include fatti richiesti, dettagli da escludere, pagine, citazioni,
+immagini disponibili e chiarimenti senza fonti per le richieste ambigue. I file
+con domande, criteri e risposte rimangono sul Raspberry, esclusi da GitHub.
+
+
+### Esito verificato sul codice `ff00bfc`
+
+**47/47 superati via API sul Raspberry:** 41 domande con informazioni presenti,
+4 su informazioni assenti e 2 richieste ambigue. Nei 41 casi positivi sono passati
+anche i controlli di citazione, pagina e immagine. Report privato:
+`data/evaluations/qara-all-verified-2026-10-13.json`.
+Sono passati anche lint e 62 test, regressione sintetica 11/11 e controlli HTTP 6/6.
+Nella slice locale il kernel blocca l'accesso esterno e funzionano interfaccia,
+domanda QARA e immagine; `make health` e `make ollama-check` sono passati.
+Questa verifica non è una nuova disconnessione fisica del Wi-Fi o un nuovo riavvio.
+
+I giri intermedi non superati restano conservati: il risultato finale riguarda
+questi 47 casi e non garantisce la correttezza di qualunque futura domanda.
+
+Prossimo passo consigliato: fare una prova personale dal browser del Raspberry,
+con Wi-Fi disattivato, usando altre domande spontanee e controllando testo e pagina.
+Per aggiornare l'interfaccia usare `Ctrl+Shift+R`. In alternativa si può collaudare
+un secondo manuale o aggiungere un selettore del manuale prima della domanda.
