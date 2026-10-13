@@ -301,7 +301,7 @@ def _term_features(text: str) -> set[str]:
     features: set[str] = set()
     for token in FTS_TOKEN_RE.findall(text.casefold()):
         if token in FTS_STOPWORDS or (
-            len(token) <= 2 and token not in {"me", "io", "tu"}
+            len(token) <= 2 and token not in {"me", "io", "tu", "si", "sì", "no"}
             and not any(char.isdigit() for char in token)
         ):
             continue
@@ -522,11 +522,17 @@ class AnswerService:
         self.settings = settings
 
     def _search_question(self, question: str) -> str:
-        # Normalizza una locuzione di autenticazione senza eliminare operazione o contesto.
-        return re.sub(
+        normalized = re.sub(
             r"\b(?:ho|ha|abbiamo)\s+(?:fatto|effettuato)\s+(?:l['’])?accesso\b(?!\s+all?[aeo]?\b)",
             "dopo il login", question, flags=re.IGNORECASE,
         )
+        normalized = re.sub(
+            r"\b(\w+)\s+che\s+(?:sono|è|e)\s+stat[ioae]\s+(\w+)\b",
+            r"\1 \2", normalized, flags=re.IGNORECASE,
+        )
+        if re.search(r"riconosc|riconosco|sto guardando", question, re.IGNORECASE):
+            normalized += " Indicatore visivo dell'elemento selezionato."
+        return normalized
 
     def answer(
         self,
@@ -565,6 +571,9 @@ class AnswerService:
                     extra = self.retriever.search(search_question, top_k=8, document_id=document_id)
                     seen = {hit.chunk_id for hit in hits}
                     hits.extend(hit for hit in extra if hit.chunk_id not in seen)
+                    named = [hit for hit in hits if _has_named_control(search_question, hit.content)]
+                    if named:
+                        hits = named
         if not hits:
             return Answer(
                 text="Non ho trovato informazioni pertinenti nei manuali indicizzati.",
@@ -616,6 +625,15 @@ class AnswerService:
             scores = _lexical_evidence_scores(question, contextual, scores)
             ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
             direct = None
+            requested_ids = set(IDENTIFIER_RE.findall(question.upper()))
+            if requested_ids and re.search(r"\b(?:quali?|quali)\b.*(?:messaggi|codici)", question, re.IGNORECASE):
+                coded = [index for index in ranked
+                         if set(IDENTIFIER_RE.findall(excerpts[index][1].upper())) - requested_ids
+                         and requested_ids & set(IDENTIFIER_RE.findall(hits[excerpts[index][0] - 1].content.upper()))
+                         and not re.match(r"^\d+-\s*\d+[a-z]", excerpts[index][1])]
+                if coded:
+                    source = excerpts[coded[0]][0]
+                    direct = [index + 1 for index in coded if excerpts[index][0] == source][:5]
             features = _term_features(search_question)
             for index in ranked:
                 text = excerpts[index][1]
@@ -630,7 +648,8 @@ class AnswerService:
                     and len(matched) >= min(2, len(features))
                     and len(matched) / max(1, len(features)) >= 0.35
                 ):
-                    direct = [index + 1]
+                    if direct is None:
+                        direct = [index + 1]
                 break
             nearest = [index + 1 for index in ranked if not excerpts[index][1].endswith(":")
                        and not re.match(r"^\d+-\s*\d+[a-z]", excerpts[index][1])][:4]
@@ -695,7 +714,7 @@ class AnswerService:
             question, re.IGNORECASE,
         ):
             anchors = [index for index, (_, text) in enumerate(excerpts, start=1)
-                       if _has_named_control(question, text)]
+                       if _has_named_control(search_question, text)]
             if anchors:
                 complete = [index for index in anchors
                             if excerpts[index - 1][1].rstrip().endswith((".", "!", "?", ";"))]
