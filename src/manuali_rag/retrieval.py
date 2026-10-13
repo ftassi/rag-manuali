@@ -116,6 +116,26 @@ def _selected_indices(text: str, count: int) -> list[int] | None:
     return selected
 
 
+def _selected_quotes(text: str, excerpts: list[tuple[int, str]]) -> list[int] | None:
+    try:
+        payload = json.loads(text)
+    except (ValueError, TypeError):
+        return None
+    if not isinstance(payload, dict) or not isinstance(payload.get("quotes"), list):
+        return None
+    if len(payload["quotes"]) > 5:
+        return None
+    selected = []
+    for quote in payload["quotes"]:
+        if not isinstance(quote, str):
+            return None
+        matches = [index for index, (_, value) in enumerate(excerpts, start=1) if quote == value]
+        if not matches:
+            return None
+        selected.append(matches[0])
+    return selected
+
+
 def _complete_list_selection(selected: list[int], excerpts: list[tuple[int, str]]) -> list[int]:
     """Mantiene il contesto e tutte le alternative di una lista condizionata."""
     completed = set(selected)
@@ -630,6 +650,24 @@ class AnswerService:
                 "array di numeri interi."
             ),
         }
+        if semantic:
+            values = [excerpts[index - 1][1] for index in candidates]
+            prompt = (
+                "PASSAGGI:\n" + "\n".join(evidence_lines) + f"\nDOMANDA: {question}\n"
+                "Copia nel campo quotes solo i testi dei passaggi che rispondono alla domanda. "
+                "Non copiare i numeri F o il contesto della pagina. Non modificare il testo. "
+                'Se non trovi la risposta, restituisci {"quotes": []}.'
+            )
+            output_options.update({
+                "max_tokens": 900,
+                "system_prompt": "Seleziona citazioni esatte che rispondono alla domanda, senza altri argomenti.",
+                "response_schema": {
+                    "type": "object", "properties": {"quotes": {
+                        "type": "array", "items": {"type": "string", "enum": values},
+                        "maxItems": 5,
+                    }}, "required": ["quotes"], "additionalProperties": False,
+                },
+            })
         selected = _procedure_selection(question, hits, excerpts)
         if selected is None and re.search(
             r"serve|acced|access|visualizz|vedere|vedo|trovo|trovare|aprire|apro|ottenere",
@@ -647,8 +685,11 @@ class AnswerService:
             )
         if selected is None:
             raw = self.llm.complete(user_text=prompt, **output_options)
-            visible = _selected_indices(raw, len(candidates))
-            selected = [candidates[index - 1] for index in visible] if visible is not None else None
+            if semantic:
+                selected = _selected_quotes(raw, excerpts)
+            else:
+                visible = _selected_indices(raw, len(candidates))
+                selected = [candidates[index - 1] for index in visible] if visible is not None else None
         if selected is None:
             correction = (
                 f"{prompt}\n\nCORREZIONE OBBLIGATORIA\n"
@@ -659,8 +700,11 @@ class AnswerService:
                 'Restituisci esclusivamente JSON con il campo "extracts" e numeri validi.'
             )
             raw = self.llm.complete(user_text=correction, **output_options)
-            visible = _selected_indices(raw, len(candidates))
-            selected = [candidates[index - 1] for index in visible] if visible is not None else None
+            if semantic:
+                selected = _selected_quotes(raw, excerpts)
+            else:
+                visible = _selected_indices(raw, len(candidates))
+                selected = [candidates[index - 1] for index in visible] if visible is not None else None
         if selected is None:
             text = (
                 "Non riesco a ricavare una risposta verificabile dalle fonti fornite. "

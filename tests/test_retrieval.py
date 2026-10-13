@@ -16,6 +16,7 @@ from manuali_rag.retrieval import (
     _grounded_answer,
     _needs_clarification,
     _page_context,
+    _selected_quotes,
     _procedure_selection,
     _relevant_excerpt,
     _required_identifier,
@@ -380,6 +381,14 @@ def test_context_uses_real_section_titles_without_table_of_contents() -> None:
         "Premere X.\n\nFigura 3-7 Archivio_Dettaglio pannello"
     )
     assert _page_context(content) == "Archivio operativo / Archivio Dettaglio pannello"
+
+
+def test_quote_selection_rejects_added_words_and_inverted_negation() -> None:
+    excerpts = [(1, "In stato Chiuso non è possibile modificare il documento.")]
+    assert _selected_quotes(json.dumps({"quotes": [excerpts[0][1]]}), excerpts) == [1]
+    assert _selected_quotes('{"quotes": []}', excerpts) == []
+    assert _selected_quotes('{"quotes": ["È possibile modificare il documento."]}', excerpts) is None
+    assert _selected_quotes('{"quotes": [1]}', excerpts) is None
 
 
 def test_paragraph_completion_keeps_conditions_but_not_other_controls() -> None:
