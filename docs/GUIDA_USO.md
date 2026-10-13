@@ -1,6 +1,6 @@
 # Guida pratica al RAG dei manuali
 
-Ultimo aggiornamento: **12 ottobre 2026**. Questa guida è un promemoria da mantenere
+Ultimo aggiornamento: **13 ottobre 2026**. Questa guida è un promemoria da mantenere
 insieme al codice: descrive le funzioni disponibili e distingue quelle ancora da completare.
 
 ## 1. A cosa serve e dove funziona
@@ -14,9 +14,9 @@ Ollama esegue localmente i modelli per ricerca e risposta. GitHub contiene il co
 questa guida; non serve durante l'uso ordinario.
 
 **Stato attuale:** importazione, domande e consultazione delle pagine sono disponibili.
-L'avvio automatico dopo l'accensione e il collaudo completo dopo un riavvio senza rete
-restano da completare. Non considerare una sessione avviata in background come un servizio
-già configurato per ripartire dopo ogni riaccensione.
+RAG e Ollama sono configurati come servizi automatici con accesso solo alla rete locale
+loopback. La prova ripetibile blocca le connessioni esterne dei servizi, mantenendo SSH
+disponibile; la prova con Wi-Fi/cavo fisicamente scollegati va distinta da questo controllo.
 
 ## 2. Promemoria rapido
 
@@ -39,8 +39,23 @@ cd /home/michele/progetti/rag-manuali
 make health
 ```
 
-Se compare un risultato con `"status":"ok"`, il servizio risponde già. Se il collegamento
-alla porta 8000 fallisce, verifica se la porta è occupata prima di avviare un altro processo:
+Se compare un risultato con `"status":"ok"`, il servizio risponde già. Il servizio automatico
+si gestisce con questi comandi:
+
+```bash
+systemctl status manuali-rag ollama
+sudo systemctl restart manuali-rag
+journalctl -u manuali-rag -b --no-pager -n 50
+```
+
+Dopo aggiornamenti del codice riavvia `manuali-rag`. Per fermarlo usa
+`sudo systemctl stop manuali-rag`; per disabilitare l'avvio automatico usa
+`sudo systemctl disable manuali-rag`. Ollama e RAG ascoltano solo su `127.0.0.1`.
+La configurazione limita entrambi alla slice `manuali-local.slice`, che blocca gli IP
+esterni. I download di nuovi modelli richiedono una manutenzione con accesso alla rete,
+non sono parte dell'uso offline ordinario.
+
+Se scegli l'avvio manuale, prima ferma il servizio automatico e verifica la porta:
 
 ```bash
 ss -ltnp 'sport = :8000'
@@ -304,6 +319,10 @@ riservati nella guida o nella cronologia pubblica.
   selezione semantica locale e controllo delle richieste di credenziali iniziali;
   aggiunto il comando di collaudo privato ripetibile.
 
+- **13 ottobre 2026:** avvio automatico locale con systemd, Ollama cloud disabilitato,
+  isolamento di rete comune e verifica ripetibile dopo riavvio; aggiunti comandi di gestione
+  del servizio e distinzione fra isolamento dei servizi e scollegamento fisico.
+
 ## 11. Collaudi e prossimi passi
 
 - Il codice `df7469e` ha superato 37 test automatici, 11/11 casi sintetici end-to-end
@@ -324,11 +343,40 @@ riservati nella guida o nella cronologia pubblica.
   Entrambe le domande negative vengono rifiutate senza fonti estranee. Il nuovo report è
   `data/evaluations/qara-corrected-2026-10-12.json`; il report iniziale resta conservato.
   L'esito riguarda questi casi di prova, non tutte le possibili domande.
-- Da completare: avvio automatico, prova dopo riavvio senza rete e scelta del modo più
-  comodo di accedere alla pagina dal desktop del Raspberry.
+- **13 ottobre 2026, codice `389b236`:** servizi RAG e Ollama abilitati all'avvio;
+  riavvio effettivo verificato e ripartenza automatica confermata. Entrambi usano
+  `manuali-local.slice`, con connessioni esterne bloccate dal kernel, e ascolto locale.
+  Ollama ha anche `OLLAMA_NO_CLOUD=true`. Dopo il riavvio: health e modelli disponibili,
+  interfaccia HTTP, domanda QARA e pagina citata superati; 6/6 controlli di importazione
+  e interrogazione HTTP in un indice temporaneo. `make check`: 37 test superati.
+- Da completare come verifica pratica dell'utente: uso del browser sul desktop del
+  Raspberry con Wi-Fi e cavo scollegati. La prova automatica isola i servizi dalla rete
+  esterna mantenendo SSH disponibile, senza scollegare tutta la macchina.
 
-Con il ricollaudo confermato, il prossimo passaggio consigliato è l'avvio automatico
-locale seguito dalla prova senza rete dopo un riavvio. Le alternative sono mantenere
-l'avvio manuale oppure aggiungere altre domande e manuali di prova. Miglioramenti successivi
-possono includere selettore dei manuali, gestione delle revisioni e accesso alla guida
-dall'interfaccia locale.
+Il prossimo passaggio consigliato è rendere comodo l'accesso dal desktop del Raspberry
+con un collegamento alla pagina e provare l'uso nel browser con rete fisicamente scollegata.
+Le alternative sono ampliare i manuali e le domande di prova oppure aggiungere selettore
+dei manuali, gestione delle revisioni e accesso alla guida dall'interfaccia locale.
+
+
+## 12. Verifica ripetibile dell'uso locale senza rete esterna
+
+Esegui dal terminale del Raspberry:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+sudo systemd-run --wait --pipe --collect --unit=manuali-offline-check \
+  --slice=manuali-local.slice -p User=michele \
+  -p WorkingDirectory=/home/michele/progetti/rag-manuali \
+  -p Environment=PYTHONIOENCODING=utf-8 \
+  /home/michele/progetti/rag-manuali/.venv/bin/python \
+  scripts/check_local_runtime.py --cases data/evaluations/qara-cases.json
+```
+
+Il controllo richiede il file privato dei casi già presente sul Raspberry. Verifica un
+rifiuto esplicito del kernel a una connessione esterna, poi interfaccia HTTP, una domanda
+su un manuale locale, pagina citata e importazione/interrogazione di un documento sintetico
+in un indice temporaneo. L'indice dei manuali personali resta invariato. Questa prova
+controlla le risorse usate dai servizi; non simula i clic in un browser grafico e non
+scollega fisicamente il Raspberry dalla rete. Per quella verifica, apri il browser sul
+Raspberry, scollega Wi-Fi/cavo e prova domanda e pagina; SSH sarà indisponibile.

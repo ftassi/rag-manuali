@@ -1,4 +1,4 @@
-# Punto di ripresa — 12 ottobre 2026
+# Punto di ripresa — 13 ottobre 2026
 
 ## Obiettivo finale
 
@@ -41,28 +41,42 @@ PYTHONIOENCODING=utf-8 make manual-eval \
 Il report precedente resta in `data/evaluations/qara-expanded-2026-10-12.json`.
 I file dei casi e dei report sono locali e ignorati da Git.
 
-## Avvio attuale
+## Avvio automatico e collaudo dopo riavvio
 
-Ollama è attivo e abilitato all'avvio, con `llama3.2:3b` e
-`nomic-embed-text-v2-moe` già disponibili. Gli endpoint sono locali.
-Il RAG è stato riavviato con il codice aggiornato ed è attivo sulla porta 8000,
-avviato manualmente in background; il log è `/tmp/manuali-rag-qara.log`.
-Al momento della verifica l'unità `manuali-rag.service` non è installata.
-Il processo attuale ascolta su `0.0.0.0`; nel browser del Raspberry si usa
-`http://127.0.0.1:8000`.
+Configurazione e script verificati nel commit `389b236`:
 
-**Restano da verificare il riavvio automatico e l'uso con rete scollegata.**
+- `manuali-rag.service`: abilitato e attivo, utente `michele`, repository sul Raspberry,
+  ascolto `127.0.0.1:8000`, ordinato dopo Ollama e riavvio in caso di errore.
+- `ollama.service`: abilitato e attivo, ascolto `127.0.0.1:11434`, cloud disabilitato
+  con `OLLAMA_NO_CLOUD=true` nel drop-in `manuali-local.conf`.
+- `manuali-local.slice`: comune ai due servizi, `IPAddressDeny=any` e
+  `IPAddressAllow=localhost`. Il kernel blocca le connessioni esterne; SSH resta operativo.
+- Configurazioni installate da `deploy/` dopo sincronizzazione tramite GitHub.
+
+Il Raspberry è stato realmente riavviato il **13 ottobre 2026**. Il boot ID è cambiato
+ed entrambi i servizi sono ripartiti automaticamente, senza un avvio manuale.
+`make check` ha superato 37 test; dopo il riavvio health e Ollama sono disponibili.
+
+`scripts/check_local_runtime.py`, eseguito nella stessa slice dopo il riavvio, verifica
+un rifiuto esplicito del kernel (`EPERM`/`EACCES`) all'invio di un datagramma esterno,
+la pagina HTTP, una domanda QARA con fatti/pagine/citazioni attesi e l'immagine citata.
+Seguono 6/6 controlli HTTP su un documento sintetico in un indice temporaneo.
+Tutto superato; il QARA originale resta l'unico documento nell'indice principale,
+con 226 chunk. Il comando ripetibile è nella [guida, sezione 12](GUIDA_USO.md#12-verifica-ripetibile-delluso-locale-senza-rete-esterna).
+
+Questa è una verifica con accesso esterno bloccato per RAG, Ollama e processo di prova.
+Non è una prova grafica dei clic né uno scollegamento fisico di Wi-Fi/cavo; la macchina
+mantiene la rete necessaria a SSH. La verifica pratica sul desktop resta da fare.
+I log permanenti sono consultabili con `journalctl -u manuali-rag -b`.
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** configurare l'avvio automatico del RAG su `127.0.0.1`, usando
-   utente e percorso corretti. Verificare e fermare il processo manuale prima di
-   avviare il servizio, evitando duplicati. Poi collaudare dopo un riavvio, senza rete:
-   interfaccia, domanda, apertura della pagina citata e importazione di un file locale.
-   Coordinare riavvio e scollegamento con l'utente, perché interrompono SSH.
-2. Mantenere l'avvio manuale e provare l'uso offline dal desktop del Raspberry.
-3. Ampliare prima i casi e i manuali di prova; successivamente aggiungere selettore
-   dei manuali, gestione delle revisioni o accesso alla guida nell'interfaccia.
+1. **Consigliato:** aggiungere un collegamento sul desktop alla pagina locale e fare
+   la prova pratica nel browser del Raspberry con rete fisicamente scollegata:
+   domanda, apertura della pagina e importazione di un file locale. Lo scollegamento
+   interrompe SSH, quindi quella parte richiede l'utente davanti al Raspberry.
+2. Ampliare il collaudo con altri manuali e domande.
+3. Migliorare l'interfaccia con selettore dei manuali, gestione delle revisioni o guida locale.
 
 ## Come riprendere lo sviluppo
 
