@@ -100,8 +100,8 @@ con immagini caricate; controllata visivamente la schermata testo e anteprima.
 Ripetuta con successo la prova con rete esterna bloccata nella slice comune.
 L'indice principale contiene QARA e il documento sintetico importato dall'utente.
 
-La prova fisica delle risposte QARA corrette sul desktop del Raspberry **resta da confermare**.
-Ricaricare il browser con `Ctrl+Shift+R` e ripetere le due domande, anche senza rete.
+La prova fisica è stata poi confermata dall’utente: importazione del file sintetico,
+pazienti dimessi e login con testo e immagini corretti, con Wi-Fi disattivato.
 
 ## Ultimo riscontro dell'utente e varianti login — codice `2e70848`
 
@@ -114,16 +114,38 @@ con fatti, citazione, pagina 11 e immagine accessibile. Il servizio è stato ria
 Collaudo QARA ampliato: **23/23**, regressione sintetica **11/11**, health superato; report privato
 `data/evaluations/qara-login-variants-2026-10-13.json`.
 Le sette nuove varianti sono nel file privato `data/evaluations/qara-cases.json`.
-La conferma nel browser dell'utente della variante corretta resta da ricevere.
+L’utente ha confermato nel browser anche «come faccio il login?», dopo aver già
+confermato «come posso fare il login?» senza Wi-Fi.
+
+## Ultimo collaudo spontaneo — codice `7690ed7`
+
+Aggiunta modalità `--api-url` allo script `scripts/evaluate_manual_cases.py`: interrogazione
+HTTP reale con immagini, verifiche su testo, citazioni, pagine e immagini disponibili.
+Nessuna modifica al comportamento delle risposte in questo passaggio; codice applicativo
+precedentemente validato `2e70848`. Lint e **51 test** superati sul Raspberry.
+
+**24 nuove domande: 8/24 superate dopo revisione.** Positive 6/20, assenti 2/2,
+ambigue 0/2. Inizialmente 7/24; accettata e riprovata una pagina alternativa corretta
+per la chiusura dei Support Data. Conservati entrambi gli esiti. Dei 14 casi positivi
+non superati, 12 hanno testo/sezione non pertinenti o fatti mancanti; 2 rifiutano una
+risposta che il manuale contiene. Le due domande senza argomento ricevono istruzioni
+arbitrarie. Le immagini servite correttamente non compensano una fonte sbagliata.
+
+Report e casi privati in `data/evaluations/`:
+`qara-spontaneous-cases-2026-10-13.json`, `qara-spontaneous-2026-10-13.json`,
+`qara-spontaneous-review-case-report.json`, `qara-spontaneous-reviewed-2026-10-13.json`.
+Il report rivisto contiene i riferimenti all'originale e al caso riprovato. Dati ignorati
+da Git; indice principale invariato, due documenti e 228 chunk. `make health` superato.
+La guida, sezione 14, include il comando per ripetere il collaudo sul servizio locale.
+I 23/23 casi precedenti non vanno estesi alle nuove formulazioni, che mostrano limiti reali.
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** ripetere e registrare la prova della variante login corretta nel browser del Raspberry
-   con rete fisicamente scollegata:
-   domanda, apertura della pagina e importazione di un file locale. Lo scollegamento
-   interrompe SSH, quindi quella parte richiede l'utente davanti al Raspberry.
-2. Ampliare il collaudo con altri manuali e domande.
-3. Migliorare l'interfaccia con selettore dei manuali, gestione delle revisioni o guida locale.
+1. **Consigliato:** correggere recupero/scelta dei passaggi per le parafrasi e richieste
+   ambigue; ripetere i 24 nuovi casi e i 23 precedenti, con testo e immagini.
+2. Raccogliere altre domande spontanee dell'utente e aggiungerle ai criteri privati.
+3. Aggiungere il selettore dei manuali, tenendo presente che non corregge la confusione
+   tra sezioni dello stesso documento.
 
 ## Come riprendere lo sviluppo
 

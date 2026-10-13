@@ -432,7 +432,7 @@ l'anteprima direttamente nella stessa schermata. Il placeholder è coerente con 
 sanitari. Dopo `Ctrl+Shift+R`, ripetere le due domande e controllare sia il testo sia l'immagine;
 L'utente ha poi confermato correttezza del testo e dell'immagine per i pazienti dimessi.
 La variante «come faccio il login?» ha ancora fallito, confondendo accesso e firma;
-il requisito complessivo resta aperto fino al ricollaudo di quella variante.
+dopo la correzione successiva l’utente ha confermato anche quella variante.
 
 
 ### Varianti colloquiali del login
@@ -444,6 +444,60 @@ restituiscono testo, citazione e pagina corretti, senza passaggi sulla firma.
 Sono stati aggiunti test per mantenere distinte le domande sulla firma e sull'accesso.
 `make check`: 51 test superati. Collaudo QARA ampliato: **23/23**, regressione sintetica **11/11**; report privato
 `data/evaluations/qara-login-variants-2026-10-13.json`. Le nuove formulazioni sono conservate nel file privato
-dei casi, insieme alle prove precedenti. Dopo l'aggiornamento, ripetere la domanda esatta
-nel browser del Raspberry per confermare l'esito pratico; non considerare i controlli
-su alcune formulazioni una garanzia su ogni possibile domanda.
+dei casi, insieme alle prove precedenti. L’utente ha confermato la risposta corretta a
+entrambe le formulazioni del login, verificando anche testo e immagine senza Wi-Fi.
+Questi controlli non garantiscono la correttezza su ogni possibile domanda.
+
+
+## 14. Collaudo di domande spontanee — 13 ottobre 2026
+
+Il collaudo è stato ampliato con **24 nuove domande**, distinte dai precedenti 23 casi:
+20 su informazioni presenti, 2 su informazioni assenti e 2 senza un argomento chiaro.
+Coprono accesso, liste pazienti, Support Data, problemi attivi, dati anagrafici, attività,
+diario e filtri. Criteri definiti dopo lettura delle pagine del manuale; interrogazioni al
+servizio reale con `include_images=true`, controllo del testo, pagine, citazioni e risposta
+HTTP delle immagini. Non sono nuovi collaudi fisici con Wi-Fi scollegato; i servizi
+continuano a usare la slice con accesso esterno bloccato.
+
+**Esito rivisto: 8/24 superati.** Il report iniziale era 7/24; dopo lettura della pagina
+alternativa 162 e ripetizione del singolo caso, la risposta sulla chiusura dei Support Data
+è stata accettata come corretta. Il report iniziale resta conservato.
+
+| Categoria | Superati | Totale |
+| --- | ---: | ---: |
+| Informazione presente | 6 | 20 |
+| Informazione assente | 2 | 2 |
+| Richiesta ambigua | 0 | 2 |
+
+Fra le risposte positive non superate, 12 recuperano una sezione non pertinente o non
+forniscono i fatti richiesti; 2 dichiarano di non avere informazioni che sono invece nel
+manuale. Le due richieste ambigue ricevono istruzioni specifiche senza aver chiarito
+l'argomento. Un'immagine disponibile e una citazione formalmente corretta non certificano
+che la risposta affronti la domanda. I precedenti 23/23 casi mirati restano un risultato
+storico, non una misura della robustezza alle nuove parafrasi.
+
+Codice di collaudo: `7690ed7`; risposte applicative invariate rispetto a `2e70848`.
+Lint e 51 test superati sul Raspberry; servizio sano, indice invariato (QARA più file
+sintetico). Domande, risposte e criteri restano in `data/evaluations/`, esclusi da Git.
+
+File privati:
+
+- `qara-spontaneous-cases-2026-10-13.json`: nuovi casi con criteri rivisti.
+- `qara-spontaneous-2026-10-13.json`: report iniziale.
+- `qara-spontaneous-review-case-report.json`: ripetizione del caso con pagina alternativa.
+- `qara-spontaneous-reviewed-2026-10-13.json`: riepilogo rivisto, con riferimenti ai report.
+
+Per ripetere l'intero collaudo, senza sovrascrivere questi risultati:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
+  --cases data/evaluations/qara-spontaneous-cases-2026-10-13.json \
+  --output data/evaluations/qara-spontaneous-next.json \
+  --api-url http://127.0.0.1:8000
+```
+
+Il prossimo intervento consigliato è migliorare recupero e scelta dei passaggi per le
+parafrasi, gestire le richieste senza argomento e ripetere sia questi 24 casi sia i 23
+precedenti. Le alternative sono raccogliere altre domande reali o aggiungere il selettore
+dei manuali; quest'ultimo non risolve gli errori tra sezioni dello stesso QARA.
