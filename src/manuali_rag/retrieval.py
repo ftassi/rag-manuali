@@ -78,6 +78,25 @@ def _source_sentences(excerpt: str) -> list[str]:
     return sentences
 
 
+def _page_context(content: str) -> str:
+    topics = []
+    for block in content.split("\n\n"):
+        text = " ".join(block.split())
+        if re.search(r"\.{3,}", text):
+            continue
+        if re.fullmatch(r"\d+(?:\.\d+)+\s+[^.!?]{2,150}", text):
+            topics.append(re.sub(r"^\d+(?:\.\d+)+\s+", "", text))
+        elif re.match(r"^(?:Figura|Tabella)\s+\d", text, re.IGNORECASE):
+            topics.append(re.sub(r"^(?:Figura|Tabella)\s+[\d-]+\s*[: ]?", "", text,
+                                 flags=re.IGNORECASE).replace("_", " "))
+    return " / ".join(dict.fromkeys(topics))[:600]
+
+
+def _contextual_passage(hit: SearchHit, text: str) -> str:
+    context = _page_context(hit.content)
+    return f"Sezione della pagina: {context}\nPassaggio: {text}" if context else text
+
+
 def _selected_indices(text: str, count: int) -> list[int] | None:
     text = text.strip()
     if text.startswith("```") and text.endswith("```"):
@@ -390,7 +409,7 @@ class Retriever:
         if not units:
             return []
         texts = [text for _, text in units]
-        vectors = self._cached_vectors(texts)
+        vectors = self._cached_vectors([_contextual_passage(hit, text) for hit, text in units])
         query = embed_query(self.embedder, question)
         scores = [sum(a * b for a, b in zip(query, vector, strict=True)) for vector in vectors]
         scores = _lexical_evidence_scores(question, texts, scores)
@@ -567,7 +586,9 @@ class AnswerService:
         if semantic and not image_paths:
             query = embed_query(self.retriever.embedder, search_question)
             texts = [text for _, text in excerpts]
-            vectors = self.retriever._cached_vectors(texts)
+            vectors = self.retriever._cached_vectors([
+                _contextual_passage(hits[source - 1], text) for source, text in excerpts
+            ])
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
             scores = _lexical_evidence_scores(question, texts, scores)
             nearest = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)[:10]
@@ -581,7 +602,7 @@ class AnswerService:
         prompt = (
             f"DOMANDA: {question}\nPASSAGGI:\n"
             + "\n".join(
-                f"[F{visible}] {excerpts[index - 1][1]}"
+                f"[F{visible}] {_contextual_passage(hits[excerpts[index - 1][0] - 1], excerpts[index - 1][1])}"
                 for visible, index in enumerate(candidates, start=1)
             )
             + "\nScegli solo le frasi che rispondono alla domanda, senza argomenti aggiuntivi. "
@@ -613,7 +634,9 @@ class AnswerService:
             anchors = [index for index, (_, text) in enumerate(excerpts, start=1)
                        if _has_named_control(question, text)]
             if anchors:
-                selected = anchors[:1]
+                complete = [index for index in anchors
+                            if excerpts[index - 1][1].rstrip().endswith((".", "!", "?", ";"))]
+                selected = (complete or anchors)[:1]
         if selected is None and self.settings.embedding_provider == "openai" and not image_paths:
             selected = _semantic_selection(
                 question, excerpts, scores, math.inf

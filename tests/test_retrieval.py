@@ -15,6 +15,7 @@ from manuali_rag.retrieval import (
     _credential_value_supported,
     _grounded_answer,
     _needs_clarification,
+    _page_context,
     _procedure_selection,
     _relevant_excerpt,
     _required_identifier,
@@ -373,6 +374,14 @@ def test_questions_without_a_subject_need_clarification() -> None:
     )
 
 
+def test_context_uses_real_section_titles_without_table_of_contents() -> None:
+    content = (
+        "1.1 Archivio ........ 12\n\n3.2 Archivio operativo\n\n"
+        "Premere X.\n\nFigura 3-7 Archivio_Dettaglio pannello"
+    )
+    assert _page_context(content) == "Archivio operativo / Archivio Dettaglio pannello"
+
+
 def test_paragraph_completion_keeps_conditions_but_not_other_controls() -> None:
     hit = _hit(1, 0.5)
     hit.content = (
@@ -383,6 +392,26 @@ def test_paragraph_completion_keeps_conditions_but_not_other_controls() -> None:
     assert _complete_paragraph_selection([2], excerpts, [hit]) == [1, 2]
     last = len(excerpts)
     assert _complete_paragraph_selection([last], excerpts, [hit]) == [last]
+
+
+def test_visible_selection_numbers_map_to_sparse_original_passages(tmp_path: Path) -> None:
+    hit = _hit(1, 0.5)
+    hit.content = "Dati generici non pertinenti. " * 19 + "Il codice ZR-9 indica la condizione di prova."
+
+    class StaticRetriever:
+        def search(self, *args, **kwargs):
+            return [hit]
+
+    class SelectingLLM:
+        def complete(self, *, user_text, **kwargs):
+            assert "[F8] Il codice ZR-9" in user_text
+            assert "[F20]" not in user_text
+            return '{"extracts": [8]}'
+
+    answer = AnswerService(StaticRetriever(), SelectingLLM(), settings_for(tmp_path)).answer(
+        "Che cosa indica ZR-9?"
+    )
+    assert answer.text == "Il codice ZR-9 indica la condizione di prova. [S1]"
 
 
 def test_passage_ranking_recovers_short_answer_and_invalidates_changed_text(tmp_path: Path) -> None:
