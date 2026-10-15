@@ -270,16 +270,23 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
     if re.search(r"\be\b|\bquali\b", question, re.IGNORECASE):
         query = roots(question)
         covered = roots(passages[best].text) & query
+        covered_topics = roots(first.topic) & query
         for index in ranked[1:]:
             p = passages[index]
             if p.document_id != first.document_id or p.scope != first.scope:
                 continue
+            if p.path.split(" / ")[:2] != first.path.split(" / ")[:2]:
+                continue
             if scores[index] < scores[best] - 0.16:
                 continue
+            if any(p.text in passages[chosen].text for chosen in selected):
+                continue
             matched = roots(p.text) & query
-            if len(matched - covered) and roots(p.topic) & query:
+            topics = roots(p.topic) & query
+            if (matched - covered or topics - covered_topics) and topics:
                 selected.append(index)
                 covered.update(matched)
+                covered_topics.update(topics)
             if len(selected) >= 3:
                 break
     return selected

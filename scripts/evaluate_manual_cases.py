@@ -17,9 +17,11 @@ from manuali_rag.config import Settings
 from manuali_rag.retrieval import CLARIFICATION_TEXT, AnswerService, Retriever
 
 
-def documents_match(selected: list[str], expected: list[str]) -> bool:
+def documents_match(
+    selected: list[str], expected: list[str], required: list[str] | tuple[str, ...] = (),
+) -> bool:
     """La stessa pagina di un altro manuale non è una fonte valida."""
-    return not expected or bool(selected) and set(selected) <= set(expected)
+    return (not expected or bool(selected) and set(selected) <= set(expected)) and set(required) <= set(selected)
 
 
 def main() -> None:
@@ -93,7 +95,7 @@ def main() -> None:
             facts_ok = all(term.casefold() in normalized for term in case["required_terms"])
             sources_ok = bool(set(pages) & set(expected_pages)) and all(
                 page in expected_pages for page in pages
-            ) and documents_match(documents, expected_documents)
+            ) and documents_match(documents, expected_documents, case.get("required_document_ids", []))
             citations_ok = bool(source_count) and all(
                 f"[S{index}]" in answer_text for index in range(1, source_count + 1)
             )
@@ -105,6 +107,7 @@ def main() -> None:
             "question": case["question"],
             "expected_pdf_pages": expected_pages,
             "expected_document_ids": expected_documents,
+            "required_document_ids": case.get("required_document_ids", []),
             "required_terms": case.get("required_terms", []),
             "forbidden_terms": case.get("forbidden_terms", []),
             "expect_abstention": case.get("expect_abstention", False),

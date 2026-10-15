@@ -689,3 +689,28 @@ def test_regret_and_cancel_need_saved_state_before_choosing_a_procedure(tmp_path
     )
     assert answer.text == EDIT_CLARIFICATION_TEXT
     assert not answer.sources
+
+
+def test_generic_state_change_needs_a_subject():
+    assert _needs_clarification('Come cambio lo stato?')
+    assert not _needs_clarification('Come cambio lo stato della risorsa?')
+
+
+def test_two_explicit_operations_keep_both_documents_and_renumber_sources(tmp_path):
+    first, second = _hit(1, 0.8), _hit(2, 0.8)
+    first.content = 'Premere Apri per accedere al motore.'
+    second.content = 'Premere Controlla per verificare il filtro.'
+
+    class StaticRetriever:
+        def search(self, question, **kwargs):
+            return [first if 'motore' in question else second]
+
+    class SelectingLLM:
+        def complete(self, **kwargs):
+            return '{"extracts": [1]}'
+
+    service = AnswerService(StaticRetriever(), SelectingLLM(), settings_for(tmp_path))
+    answer = service.answer('Come apro il motore e poi controllo il filtro?')
+    assert 'Premere Apri' in answer.text and 'Premere Controlla' in answer.text
+    assert '[S1]' in answer.text and '[S2]' in answer.text
+    assert answer.sources == [first, second]

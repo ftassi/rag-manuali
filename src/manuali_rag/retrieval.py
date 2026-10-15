@@ -67,7 +67,12 @@ def _complete_filter_steps(
 def _needs_clarification(question: str) -> bool:
     # Verbi senza oggetto e pronomi non identificano una procedura; non inventare il contesto.
     tokens = set(FTS_TOKEN_RE.findall(question.casefold())) - FTS_STOPWORDS
-    generic = {"dove", "devo", "cliccare", "clicco", "aprire", "apro", "lo", "la", "farlo"}
+    generic = {
+        "dove", "devo", "cliccare", "clicco", "aprire", "apro", "lo", "la", "farlo",
+        "stato", "cambio", "cambiare", "modifico", "modificare", "attivo", "attivare",
+        "disattivo", "è", "aggiorno", "aggiornare", "salvo", "salvare", "configuro",
+        "configurare", "creo", "creare",
+    }
     return not (tokens - generic)
 
 
@@ -619,6 +624,10 @@ class AnswerService:
             return None
         structured_ids = {p.document_id for p in passages}
         explicit = bool(scope_tags(passages) & set(FTS_TOKEN_RE.findall(question.casefold())))
+        subjects = roots(" ".join(p.scope for p in passages)) - roots(
+            "gestione manuale utente guida configurazione"
+        )
+        explicit = explicit or bool(subjects & roots(question))
         mandatory = document_id in structured_ids or explicit
         missing = Answer("Le fonti fornite non contengono questa informazione.", [])
         available = set().union(*(roots(p.contextual) for p in passages))
@@ -634,9 +643,12 @@ class AnswerService:
         similarities = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
         scores = rank_scores(question, passages, similarities)
         best = max(range(len(scores)), key=scores.__getitem__)
+        runners = [score for index, score in enumerate(scores)
+                   if index != best and passages[index].text != passages[best].text]
+        clear = scores[best] >= 0.55 and scores[best] - max(runners, default=0) >= 0.06
         body_terms = roots(passages[best].text)
         topic_terms = roots(passages[best].topic)
-        if (scores[best] < 0.65 or similarities[best] < 0.35
+        if (not (scores[best] >= 0.65 or clear) or similarities[best] < 0.35
                 or not (query_terms & body_terms)
                 or not mandatory and not query_terms & topic_terms):
             return missing if mandatory else None
@@ -700,6 +712,26 @@ class AnswerService:
                 and re.search(r"annull", question, re.IGNORECASE)
                 and not re.search(r"salvat|inserimento|prima di|ancora", question, re.IGNORECASE)):
             return Answer(text=EDIT_CLARIFICATION_TEXT, sources=[])
+        clauses = re.split(r"\s+(?:e\s+)?poi\s+", question, flags=re.IGNORECASE)
+        if 1 < len(clauses) <= 3 and all(not _needs_clarification(clause) for clause in clauses):
+            replies = [self.answer(clause, top_k=top_k, document_id=document_id,
+                                   include_images=include_images) for clause in clauses]
+            incomplete = next((reply for reply in replies if not reply.sources), None)
+            if incomplete is not None:
+                return incomplete
+            sources = []
+            paragraphs = []
+            for reply in replies:
+                mapping = {}
+                for old, hit in enumerate(reply.sources, start=1):
+                    source = next((i for i, item in enumerate(sources, start=1)
+                                   if item.chunk_id == hit.chunk_id), None)
+                    if source is None:
+                        sources.append(hit)
+                        source = len(sources)
+                    mapping[old] = source
+                paragraphs.append(re.sub(r"\[S(\d+)\]", lambda m: f"[S{mapping[int(m[1])]}]", reply.text))
+            return Answer("\n\n".join(paragraphs), sources)
         search_question = question
         semantic = self.settings.embedding_provider == "openai"
         if semantic:
