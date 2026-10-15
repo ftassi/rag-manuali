@@ -551,3 +551,45 @@ Prossimo passo consigliato: fare una prova personale dal browser del Raspberry,
 con Wi-Fi disattivato, usando altre domande spontanee e controllando testo e pagina.
 Per aggiornare l'interfaccia usare `Ctrl+Shift+R`. In alternativa si può collaudare
 un secondo manuale o aggiungere un selettore del manuale prima della domanda.
+
+
+## 16. Prova pratica: autore, modifica e applicazione dei filtri
+
+La prova personale del 15 ottobre ha mostrato due risposte non pertinenti su
+formulazioni non presenti nei 47 casi iniziali. Una pagina corretta non basta:
+il testo deve rispondere all'operazione e ai vincoli richiesti.
+
+Quando chiedi di correggere una nota, specifica se è già salvata oppure se stai
+ancora scrivendo. Modifica di un contenuto salvato e annullamento prima del
+salvataggio richiedono procedure diverse; il RAG deve chiedere un chiarimento
+quando non può distinguerle. Per una modifica salvata verifica apertura, comando
+di modifica e salvataggio. Per le proprie note deve conservare il vincolo sull'autore;
+per i filtri deve riportare anche l'eventuale conferma richiesta dal manuale.
+
+I nuovi criteri sono locali e privati. Per ripetere tutti i casi, ora 51:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
+  --cases data/evaluations/qara-all-cases-2026-10-15.json \
+  --output data/evaluations/qara-all-workflows-next.json \
+  --api-url http://127.0.0.1:8000
+```
+
+La sola prova pratica ampliata usa invece
+`data/evaluations/qara-practical-cases-2026-10-15.json`.
+
+
+Sul codice `e555e6c`, **67 test** e collaudo complessivo **51/51** superati sul
+Raspberry. I cinque casi pratici mirati erano già passati sul codice `ea0a689`;
+il giro completo include anche il successivo riordino delle anteprime.
+Report privato: `data/evaluations/qara-all-workflows-2026-10-15.json`.
+La verifica personale dopo questa correzione resta da eseguire: i risultati
+valgono per i casi provati, non per ogni possibile formulazione.
+
+Anche regressione sintetica **11/11**, controlli HTTP **6/6** e controlli di salute
+sono passati. La prova nella slice locale ha verificato il blocco della rete esterna
+e il funzionamento di interfaccia, procedura della nota salvata e immagine citata.
+Per la prova personale aggiorna il browser con `Ctrl+Shift+R`, disattiva il Wi-Fi e
+ripeti i casi pratici. Successivamente si può collaudare un secondo manuale oppure
+aggiungere un selettore dei manuali.

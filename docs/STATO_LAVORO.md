@@ -1,10 +1,57 @@
-# Punto di ripresa — 13 ottobre 2026
+# Punto di ripresa — 15 ottobre 2026
 
 ## Obiettivo finale
 
 Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte nel
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
+
+## Riscontro pratico successivo — 15 ottobre 2026
+
+La prova personale sul codice pubblicato `8468371` evidenzia altri limiti:
+
+- Annullamento/correzione di una nota: testo non pertinente, immagine pertinente.
+  L'utente ha chiarito di voler correggere una nota già salvata, distinta
+  dall'annullamento di modifiche non ancora salvate.
+- Visualizzazione delle sole note dell'utente: risposta generica sul dettaglio,
+  senza conservare il vincolo sull'autore. Caso non superato.
+- Ripristino dei filtri: testo e immagine accettati, istruzioni migliorabili in completezza.
+- Richiesta senza operazione specificata: chiarimento corretto, confermato dall'utente.
+
+Il risultato 47/47 riportato sotto resta riferito ai casi del 13 ottobre: non copre
+queste nuove formulazioni. L'utente ha confermato l'indirizzo dopo la prova offline;
+connessione SSH ripristinata e versione controllata prima della sincronizzazione.
+
+## Correzione della prova pratica — codice `e555e6c`
+
+La selezione conserva il vincolo sull'autore delle note. Le istruzioni di filtro
+includono la conferma per applicarle, anche quando è sulla pagina successiva dello
+stesso documento. Per le correzioni di contenuti salvati vengono recuperati apertura,
+comando di modifica e salvataggio; le righe numerate delle tabelle PDF sono separate
+per evitare di trascinare altri controlli. Le anteprime seguono l'ordine delle citazioni.
+Se il testo esprime insieme un errore e l'annullamento senza chiarire lo stato di
+salvataggio, viene chiesto quale operazione si intende prima di scegliere una procedura.
+
+Sul Raspberry: lint e **67 test** superati sul codice `e555e6c`. Prova mirata
+precedente **5/5** sul codice applicativo `ea0a689`, prima del solo riordino delle
+anteprime. Casi privati in `data/evaluations/qara-practical-cases-2026-10-15.json`;
+report in `qara-practical-report-2026-10-15.json`. Collaudo complessivo ampliato
+nel file `qara-all-cases-2026-10-15.json`: 51 casi, inclusi tutti i 47 precedenti.
+Per il precedente filtro sulle proprie note è accettata anche pagina 51, verificata
+sul manuale: contiene la conferma necessaria per applicare il filtro di pagina 50.
+Criterio rivisto annotato nel nuovo file, esiti e criteri storici conservati.
+Collaudo completo sul codice `e555e6c`: **51/51 superati via API** con controllo di
+fatti, pagine, citazioni e immagini; report privato
+`data/evaluations/qara-all-workflows-2026-10-15.json`.
+Categorie: 44 positivi, 4 informazioni assenti e 3 richieste ambigue, tutti superati.
+Regressione sintetica **11/11** (`/tmp/qara-workflows-e2e.json` sul Raspberry), HTTP
+**6/6**, `make health` e `make ollama-check` superati. Prova nella slice locale:
+accesso esterno negato dal kernel, interfaccia e nuova procedura della nota salvata
+con immagine funzionanti. Entrambi i servizi attivi nella slice locale, senza
+riavvii automatici; indice principale invariato, due documenti e 228 chunk.
+Non è una nuova prova fisica senza Wi-Fi: il riscontro personale dopo la
+correzione resta da eseguire. Modelli e manuali rimangono locali.
+
 
 ## Correzione di recupero e ambiguità — codice `ff00bfc`
 
@@ -171,13 +218,17 @@ I 23/23 casi precedenti non vanno estesi alle nuove formulazioni, che mostrano l
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** prova personale nel browser del Raspberry con Wi-Fi disattivato,
-   nuove domande spontanee e verifica di testo e pagina; aggiornare con `Ctrl+Shift+R`.
+1. **Consigliato:** ripetere nel browser del Raspberry, con Wi-Fi disattivato,
+   i casi pratici di nota salvata, proprie note e ripristino filtri; aggiornare
+   con `Ctrl+Shift+R`, verificare testo completo e pagine pertinenti. La nota
+   già salvata va specificata nella domanda; la precedente frase ambigua
+   deve chiedere di distinguere modifica salvata e annullamento prima del salvataggio.
 2. Importare e collaudare un secondo manuale, controllando le risposte tra documenti.
 3. Aggiungere il selettore dei manuali per limitare esplicitamente la ricerca.
 
-Le correzioni richieste e la ripetizione dei 47 casi sono completate; le opzioni
-successive servono ad ampliare la verifica e l'uso, non a sostituire l'esito storico.
+Le correzioni della prova pratica e il collaudo di 51 casi sono completati sul
+Raspberry. Atteso il riscontro personale dopo l'aggiornamento; gli esiti precedenti
+restano riferiti al loro codice e ai loro criteri.
 
 ## Come riprendere lo sviluppo
 
