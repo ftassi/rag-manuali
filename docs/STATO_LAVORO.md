@@ -6,6 +6,53 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Selezione automatica di manuale e sezione — codice `bf9817b`
+
+Richiesta dell'utente: scegliere la fonte dalla domanda, senza chiedere di
+selezionare un manuale nell'interfaccia. La distinzione deve coprire uso del software
+e configurazione, anche fra sezioni diverse dello stesso PDF. Il nome del file
+non è usato come regola di instradamento e non sono aggiunte risposte predefinite
+per le domande private del collaudo.
+
+Aggiunto parser per guide con capitoli semplici: titoli come contesto, continuità
+fra pagine, procedure numerate complete, elenchi di parametri e relative etichette.
+Il confronto usa embedding locali più corrispondenze con titoli, parametri e soggetto.
+I manuali con struttura gerarchica mantengono il percorso di recupero già collaudato.
+Una domanda senza oggetto concreto o con due contesti equivalenti chiede chiarimento.
+Due operazioni esplicite collegate da una sequenza possono usare entrambi i documenti,
+con citazioni rinumerate e immagini in ordine. Se una parte non ha supporto, non
+viene inventata una procedura per completarla.
+
+Sul Raspberry, lint e **87 test** superati su `bf9817b`. Indice invariato:
+tre documenti e 236 chunk; niente reimportazione, nuovi modelli o servizi esterni.
+I vettori aggiuntivi del contesto vengono conservati nella cache SQLite locale.
+Giri intermedi AGENDE conservati (18/26 e 22/26); primo giro con nuove formulazioni
+35/36. L'ultimo residuo riguardava la richiesta dei reparti invece del nome del
+campo: corretta la composizione dei parametri, distinguendo un contesto alternativo
+da due prove complementari della stessa sezione ed escludendo introduzioni estranee.
+Controllo mirato via API superato con entrambe le istruzioni e sola pagina pertinente.
+Un successivo falso positivo associava una password iniziale a un campo di orario:
+aggiunto controllo del supporto all'autenticazione e test di regressione.
+
+Criteri privati: `data/evaluations/agende-routing-cases-2026-10-15.json` (36),
+che conserva i 26 casi rivisti e aggiunge dieci prove senza nomi dei manuali,
+ambiguità e presenza obbligatoria di entrambe le fonti in una domanda composta.
+Regressione: `qara-multimanual-cases-2026-10-15.json` (51), senza scope e con
+controllo del documento citato. Esito finale sullo stesso commit: **36/36** e
+**51/51**, cioè **87/87 casi via API**. I 26 casi storici AGENDE sono tutti superati;
+passano anche le dieci nuove formulazioni, incluse richieste senza nomi dei software,
+rifiuto di autenticazione non documentata e domanda composta con entrambe le fonti.
+Report privati: `agende-auto-validated-2026-10-15.json` e
+`qara-auto-validated-2026-10-15.json`, entrambi in `data/evaluations/`.
+Non cambiati i criteri dei 26 casi rivisti né quelli dei 51 QARA.
+Regressione sintetica **11/11** (`/tmp/manuali-routing-e2e.json` sul Raspberry),
+HTTP **6/6**, `make health` e `make ollama-check` superati. Nella slice locale
+il kernel blocca l'accesso esterno; una domanda senza software o manuale indicati
+ha scelto la fonte AGENDE corretta, con istruzioni e immagine accessibile.
+Entrambi i servizi attivi in `manuali-local.slice`, senza riavvii automatici.
+Questo controllo è distinto da una prova personale con Wi-Fi fisicamente disattivato,
+che resta il prossimo passo. Manuali, casi, risposte, indice e modelli restano locali.
+
 ## Secondo manuale: collaudo AGENDE — 15 ottobre 2026
 
 Importato sul Raspberry il PDF già presente nella sottocartella `Manuali Hero`
@@ -286,17 +333,16 @@ I 23/23 casi precedenti non vanno estesi alle nuove formulazioni, che mostrano l
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** correggere recupero delle sezioni e completezza di procedure
-   e liste del secondo manuale; ripetere i 26 casi rivisti e i 51 QARA nell'indice misto.
-   Escludere titoli come risposta e distinguere i due contesti interni del PDF.
-2. Aggiungere il selettore dei manuali, utile per lo scope ma insufficiente a
-   risolvere gli scambi fra sezioni interne dello stesso documento.
-3. Ridurre le frasi superflue nelle risposte conservando istruzioni e condizioni.
+1. **Consigliato:** prova personale dal browser del Raspberry senza Wi-Fi,
+   con domande su creazione e modifica di un'agenda, accesso al software e una
+   sequenza di operazioni che richiede entrambi i manuali. Omettere il nome del
+   documento e controllare testo, fonti e immagini. Aggiornare con `Ctrl+Shift+R`.
+2. Raccogliere nuove formulazioni spontanee per ampliare il collaudo della selezione.
+3. Migliorare la sintesi delle risposte oppure i titoli visibili dei documenti.
 
-Il collaudo del secondo manuale è completato con esito non superato; importazione,
-funzionamento locale e regressione QARA sono verificati. Le correzioni applicative
-per il nuovo manuale restano da eseguire. Nessuna nuova prova personale richiesta
-prima di correggere i limiti già misurati.
+La scelta è automatica, come richiesto dall'utente; non è previsto un menu per
+scegliere il manuale. Restano da validare personalmente le risposte della nuova
+versione. Gli esiti automatici riguardano i casi provati e non tutte le domande future.
 
 ## Come riprendere lo sviluppo
 

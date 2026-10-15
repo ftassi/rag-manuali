@@ -146,9 +146,10 @@ selezione del modello non ha superato i controlli: consulta le pagine proposte.
 
 ### Più manuali nell'indice
 
-La pagina web attuale cerca in tutti i manuali indicizzati e non ha un selettore del documento.
-Specificare il nome del prodotto e della funzione aiuta, ma non impone un filtro rigido.
-Per limitare una domanda a un documento dal terminale:
+La pagina sceglie automaticamente manuale e sezione in base alla domanda e ai
+contenuti indicizzati: non devi selezionare un documento. Specifica l'operazione e
+l'oggetto; se la richiesta è ambigua, il RAG deve chiedere un chiarimento.
+Per un controllo diagnostico puoi limitare una domanda a un documento dal terminale:
 
 ```bash
 make documents
@@ -365,8 +366,9 @@ Il collegamento **Manuali RAG** è installato sul desktop e nel menu applicazion
 Il prossimo passaggio è ripetere le due domande QARA nel browser del Raspberry dopo
 le correzioni e confermare testo e immagini anche senza rete. Ricaricare la pagina con
 `Ctrl+Shift+R` per vedere l’interfaccia aggiornata.
-Le alternative sono ampliare i manuali e le domande di prova oppure aggiungere selettore
-dei manuali, gestione delle revisioni e accesso alla guida dall'interfaccia locale.
+Le alternative sono ampliare i manuali e le domande di prova, gestire le revisioni
+oppure rendere la guida accessibile dall'interfaccia locale. La scelta del manuale
+è ora automatica, come descritto nella sezione 18.
 
 
 ## 12. Verifica ripetibile dell'uso locale senza rete esterna
@@ -550,7 +552,7 @@ questi 47 casi e non garantisce la correttezza di qualunque futura domanda.
 Prossimo passo consigliato: fare una prova personale dal browser del Raspberry,
 con Wi-Fi disattivato, usando altre domande spontanee e controllando testo e pagina.
 Per aggiornare l'interfaccia usare `Ctrl+Shift+R`. In alternativa si può collaudare
-un secondo manuale o aggiungere un selettore del manuale prima della domanda.
+un secondo manuale; la selezione automatica delle fonti è descritta nella sezione 18.
 
 
 ## 16. Prova pratica: autore, modifica e applicazione dei filtri
@@ -594,8 +596,8 @@ Anche regressione sintetica **11/11**, controlli HTTP **6/6** e controlli di sal
 sono passati. La prova nella slice locale ha verificato il blocco della rete esterna
 e il funzionamento di interfaccia, procedura della nota salvata e immagine citata.
 Per la prova personale aggiorna il browser con `Ctrl+Shift+R`, disattiva il Wi-Fi e
-ripeti i casi pratici. Successivamente si può collaudare un secondo manuale oppure
-aggiungere un selettore dei manuali.
+ripeti i casi pratici. Il successivo collaudo del secondo manuale e la scelta
+automatica delle fonti sono documentati nelle sezioni 17 e 18.
 
 
 ## 17. Secondo manuale e verifica delle fonti
@@ -645,7 +647,61 @@ Report e criteri rivisti restano in `data/evaluations/` sul Raspberry:
 e `qara-multimanual-report-2026-10-15.json`. Il report iniziale AGENDE è conservato
 insieme alla ripetizione dei due casi con fonte alternativa.
 
-Prossimo passo consigliato: correggere selezione delle sezioni e completezza dei
-passaggi del nuovo manuale, poi ripetere entrambi i gruppi. Il selettore dei manuali
-è un'alternativa utile per scegliere il documento, ma non corregge da solo questi
-errori interni al PDF. La sintesi delle risposte resta un miglioramento separato.
+I limiti di questo primo collaudo sono stati affrontati nell'intervento della
+sezione 18. L'utente ha richiesto la scelta automatica del manuale dalla domanda,
+senza un menu di selezione. La sintesi delle risposte resta un miglioramento separato.
+
+
+## 18. Scelta automatica del manuale dalla domanda
+
+Non devi scegliere un manuale da un menu. Dopo l'importazione, il RAG cerca le
+fonti in base a contenuti e struttura: operazioni d'uso nel manuale utente,
+configurazioni nella guida pertinente, distinguendo anche le sezioni dello stesso
+PDF. Puoi formulare la domanda senza scrivere il nome del file o del software.
+Il nome del PDF non determina da solo la scelta.
+
+Indica l'operazione e l'oggetto: per esempio una nota già salvata oppure un'agenda
+attiva. Se mancano informazioni per distinguere le procedure, il RAG deve chiedere
+un chiarimento. Puoi chiedere due operazioni in sequenza: se servono più manuali,
+le citazioni e le immagini devono identificare le fonti di ciascuna parte.
+Un'informazione assente deve essere dichiarata, anche se altre pagine contengono
+termini simili. Tutta la ricerca e i modelli restano sul Raspberry.
+
+Per ripetere il collaudo ampliato di selezione automatica (36 casi):
+
+```bash
+cd /home/michele/progetti/rag-manuali
+PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
+  --cases data/evaluations/agende-routing-cases-2026-10-15.json \
+  --output data/evaluations/agende-routing-next.json \
+  --api-url http://127.0.0.1:8000
+```
+
+Ripetere anche i 51 casi in `qara-multimanual-cases-2026-10-15.json` quando cambia
+il recupero. I casi e i report rimangono privati e non sono caricati su GitHub.
+
+
+### Esito verificato della selezione automatica
+
+Sul codice `bf9817b`, **87 test** superati sul Raspberry e **87/87 casi via API**:
+36 su AGENDE e instradamento automatico (i 26 precedenti più dieci nuove prove),
+51 sul QARA nell'indice misto. I controlli includono testo, documento, pagina,
+citazioni e immagini. La domanda composta ha citato entrambi i manuali.
+Criteri precedenti invariati; report privati
+`agende-auto-validated-2026-10-15.json` e `qara-auto-validated-2026-10-15.json`.
+
+Per la prova personale aggiorna il browser con `Ctrl+Shift+R`, disattiva il Wi-Fi e
+chiedi operazioni d'uso e configurazione senza indicare il manuale. Controlla che
+anche le immagini appartengano alla procedura richiesta e segnala eventuali frasi
+superflue o passaggi mancanti. Questi risultati coprono i casi collaudati.
+
+Rinominare il PDF originale non aggiorna automaticamente il titolo già registrato
+nell'indice. La selezione automatica usa i contenuti indicizzati; per cambiare il
+nome mostrato nell'interfaccia occorre aggiornare anche i metadati del documento.
+
+
+Sono passati anche regressione sintetica **11/11**, HTTP **6/6** e controlli di salute.
+La prova nella slice locale ha verificato il blocco della rete esterna e la scelta
+automatica di AGENDE per una domanda senza nome del manuale o del software, con
+istruzioni e immagine citata disponibili. Non è un nuovo test fisico con Wi-Fi
+disattivato: il riscontro personale resta da raccogliere.

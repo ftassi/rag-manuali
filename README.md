@@ -186,11 +186,22 @@ pagine o citazioni. Il primo uso dopo un aggiornamento può richiedere più temp
 Nomic usa `search_query:` per le domande e `search_document:` per i documenti,
 come indicato nella [documentazione del modello](https://huggingface.co/nomic-ai/nomic-embed-text-v2-moe).
 
+La scelta del documento avviene automaticamente dai contenuti della domanda.
+Per le guide con capitoli numerati semplici, il recupero mantiene gerarchia delle
+sezioni e continuità fra pagine: i titoli sono contesto, le procedure e gli elenchi
+conservano i passi necessari e le etichette dei parametri. Il contesto aiuta a
+distinguere il soggetto della sezione dai riferimenti ad altri sistemi. Il nome del file non
+è una regola di classificazione. I casi incerti fra contesti equivalenti richiedono
+un chiarimento; operazioni esplicite in sequenza possono citare più manuali.
+La cache locale include il testo del contesto, quindi cambia quando cambiano le fonti.
+
 Le richieste senza un argomento concreto ricevono una domanda di chiarimento senza fonti.
 Le risposte riportano testo originale: procedure nominate, liste obbligatorie e passaggi
 completi fortemente pertinenti vengono selezionati dal programma; nei casi incerti
 `llama3.2:3b` sceglie fra poche citazioni esatte. La selezione diretta richiede sia un punteggio
 almeno `MANUALI_ANSWER_UNIT_MIN_SIMILARITY=0.70` sia copertura lessicale del soggetto.
+Questa soglia riguarda le singole frasi; il recupero di procedure strutturate
+confronta invece contesti di sezione e parametri, conservando i passi correlati.
 Il punteggio combina similarità e corrispondenza dei termini nel contesto, non è una probabilità.
 `MANUALI_ANSWER_AMBIGUITY_MARGIN=0.02` limita l'aggiunta di fonti meno pertinenti.
 Condizioni e alternative necessarie vengono conservate, mentre altre voci di menu non
