@@ -908,7 +908,10 @@ class AnswerService:
                 hits = []
         cited = {int(index) for index in re.findall(r"\[S(\d+)\]", text)}
         if cited:
-            source_indices = [index for index in range(1, len(hits) + 1) if index in cited]
+            # Testo e anteprime seguono l'ordine dei passi, anche fra pagine diverse.
+            source_indices = list(dict.fromkeys(
+                int(index) for index in re.findall(r"\[S(\d+)\]", text)
+            ))
             mapping = {old: new for new, old in enumerate(source_indices, start=1)}
             text = re.sub(
                 r"\[S(\d+)\]",
