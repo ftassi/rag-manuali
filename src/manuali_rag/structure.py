@@ -82,6 +82,10 @@ class Passage:
         return self.parts[0][0].document_id
 
     @property
+    def chapter(self) -> str:
+        return self.path.split(" / ")[1 if self.scope else 0]
+
+    @property
     def contextual(self) -> str:
         return f"Contesto: {self.path}\nPassaggio: {self.text}"
 
@@ -275,7 +279,7 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
             p = passages[index]
             if p.document_id != first.document_id or p.scope != first.scope:
                 continue
-            if p.path.split(" / ")[:2] != first.path.split(" / ")[:2]:
+            if p.chapter != first.chapter:
                 continue
             if scores[index] < scores[best] - 0.16:
                 continue
