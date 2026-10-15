@@ -17,6 +17,11 @@ from manuali_rag.config import Settings
 from manuali_rag.retrieval import CLARIFICATION_TEXT, AnswerService, Retriever
 
 
+def documents_match(selected: list[str], expected: list[str]) -> bool:
+    """La stessa pagina di un altro manuale non è una fonte valida."""
+    return not expected or bool(selected) and set(selected) <= set(expected)
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--cases", required=True, type=Path)
@@ -38,6 +43,7 @@ def main() -> None:
     results = []
     for case in cases:
         expected_pages = case.get("expected_pdf_pages", [])
+        expected_documents = case.get("expected_document_ids", [])
         if not expected_pages and not case.get("expect_abstention", False):
             raise ValueError(f"Specificare pagine attese o astensione per {case['id']}")
         started = time.perf_counter()
@@ -53,6 +59,7 @@ def main() -> None:
                 payload = response.json()
                 answer_text = payload["answer"]
                 pages = [source["page"] for source in payload["sources"]]
+                documents = [source["document_id"] for source in payload["sources"]]
                 source_count = len(payload["sources"])
                 images_ok = bool(source_count) or case.get("expect_abstention", False)
                 for source in payload["sources"]:
@@ -69,6 +76,7 @@ def main() -> None:
             )
             answer_text = answer.text
             pages = [source.page for source in answer.sources]
+            documents = [source.document_id for source in answer.sources]
             source_count = len(answer.sources)
         normalized = answer_text.casefold()
         if case.get("expect_abstention", False):
@@ -85,7 +93,7 @@ def main() -> None:
             facts_ok = all(term.casefold() in normalized for term in case["required_terms"])
             sources_ok = bool(set(pages) & set(expected_pages)) and all(
                 page in expected_pages for page in pages
-            )
+            ) and documents_match(documents, expected_documents)
             citations_ok = bool(source_count) and all(
                 f"[S{index}]" in answer_text for index in range(1, source_count + 1)
             )
@@ -96,12 +104,14 @@ def main() -> None:
             "id": case["id"],
             "question": case["question"],
             "expected_pdf_pages": expected_pages,
+            "expected_document_ids": expected_documents,
             "required_terms": case.get("required_terms", []),
             "forbidden_terms": case.get("forbidden_terms", []),
             "expect_abstention": case.get("expect_abstention", False),
             "expect_clarification": case.get("expect_clarification", False),
             "answer": answer_text,
             "selected_pdf_pages": pages,
+            "selected_document_ids": documents,
             "facts_ok": facts_ok,
             "sources_ok": sources_ok,
             "citations_ok": citations_ok,
