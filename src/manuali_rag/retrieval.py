@@ -11,7 +11,14 @@ from .config import Settings
 from .embeddings import Embedder, embed_query
 from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
-from .structure import passages_from_hits, rank_scores, roots, scope_tags, select_passages
+from .structure import (
+    focus_question,
+    passages_from_hits,
+    rank_scores,
+    roots,
+    scope_tags,
+    select_passages,
+)
 
 IDENTIFIER_RE = re.compile(r"\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
 CLARIFICATION_TEXT = (
@@ -621,7 +628,8 @@ class AnswerService:
         evidence = [(index, p.text) for index, p in enumerate(passages)]
         if not _credential_value_supported(question, evidence) or not _price_value_supported(question, evidence):
             return missing if mandatory else None
-        query = embed_query(self.retriever.embedder, question)
+        focused = focus_question(question)
+        query = embed_query(self.retriever.embedder, focused)
         vectors = self.retriever._cached_vectors([p.contextual for p in passages])
         similarities = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
         scores = rank_scores(question, passages, similarities)
@@ -635,10 +643,12 @@ class AnswerService:
         competitors = [hit.semantic_score or 0 for hit in hits if hit.document_id not in structured_ids]
         if competitors and max(competitors) > scores[best] + 0.06 and not mandatory:
             return None
-        selected = select_passages(question, passages, scores)
+        selected = select_passages(focused, passages, scores)
         parts = [part for index in selected for part in passages[index].parts]
         sources: list[SearchHit] = []
-        lines = []
+        headings = list(dict.fromkeys(" / ".join(passages[index].path.split(" / ")[:2])
+                                      for index in selected))
+        lines = [" — ".join(headings)]
         seen = set()
         for hit, text in parts:
             key = (hit.chunk_id, text)

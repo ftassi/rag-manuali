@@ -14,7 +14,20 @@ from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit
 BULLET = re.compile(r"^[•◼➢❖▪]\s*")
 NUMBER = re.compile(r"^(\d+)\.\s*(.+)$")
 VERB = re.compile(r"^(?:[A-Za-zÀ-ÿ]+(?:are|ere|ire)|clicca|seleziona|accedi|premi)\b", re.IGNORECASE)
-NOISE = FTS_STOPWORDS | {"quali", "quanti", "dove", "già", "gia", "devo", "posso", "come", "il", "che"}
+NOISE = (FTS_STOPWORDS - {"codice"}) | {"quali", "quanti", "dove", "già", "gia", "devo", "posso", "come", "il", "che"}
+
+
+def focus_question(question: str) -> str:
+    tail = question.rsplit(":", 1)[-1].strip()
+    return tail if re.match(r"come\b|cosa\b|quali?\b|quando\b", tail, re.IGNORECASE) else question
+
+
+def target_terms(question: str) -> set[str]:
+    match = re.search(
+        r"\b(?:quali|quale|quanti)\s+(.+?)(?=\s+(?:devo|imposto|scelgo|uso|configuro|per|di)\b|[?])",
+        question, re.IGNORECASE,
+    )
+    return roots(match[1]) if match else set()
 
 
 def roots(text: str) -> set[str]:
@@ -26,6 +39,8 @@ def roots(text: str) -> set[str]:
             token = "creaz"
         elif re.fullmatch(r"aggiungo|aggiungere|inserire|inserimento", token):
             token = "inser"
+        elif token in {"ora", "orari", "orario"}:
+            token = "ora"
         elif len(token) >= 6 and token.isalpha():
             token = token[:5]
         elif len(token) >= 4 and token[-1] in "aeio":
@@ -103,7 +118,9 @@ def _document_passages(doc_hits: list[SearchHit]) -> list[Passage]:
 
     def emit(kind: str, parts: list[tuple[SearchHit, str]], topic: str = "") -> None:
         if parts:
-            result.append(Passage(path(), topic or label or section, scope, kind, list(parts)))
+            named = re.match(r"Nella sezione ([^,]+),", parts[0][1])
+            local = named[1] if named else topic or label or section
+            result.append(Passage(path(), local, scope, kind, list(parts)))
 
     def flush() -> None:
         nonlocal group, group_kind, last_number
@@ -180,7 +197,8 @@ def scope_tags(passages: list[Passage]) -> set[str]:
 
 def rank_scores(question: str, passages: list[Passage], similarities: list[float]) -> list[float]:
     """Il soggetto della sezione pesa più delle citazioni incidentali nel testo."""
-    query = roots(question)
+    query = roots(focus_question(question))
+    targets = target_terms(focus_question(question))
     metadata = [roots(p.path) for p in passages]
     frequencies = Counter(word for words in metadata for word in words)
     weights = {word: 1 + len(passages) / (1 + frequencies[word]) ** 0.5 for word in query}
@@ -191,6 +209,14 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
 
     scores = []
     procedural = bool(re.search(r"\bcome\b|da dove|quali passi", question, re.IGNORECASE))
+    field_names = set().union(*(roots(p.topic) for p in passages if p.kind == "field"))
+    requested_fields = (targets or query) & field_names
+    entities = set()
+    for p in passages:
+        title = p.path.split(" / ")[1 if p.scope else 0]
+        entities.update(word.casefold() for word in FTS_TOKEN_RE.findall(title)[1:]
+                        if word[0].isupper() and len(word) >= 3)
+    wanted_entities = entities & set(FTS_TOKEN_RE.findall(question.casefold()))
     for p, similarity, context in zip(passages, similarities, metadata, strict=True):
         score = similarity + 0.30 * coverage(context) + 0.15 * coverage(roots(p.text))
         score += 0.12 * coverage(roots(p.topic))
@@ -198,6 +224,11 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
             score += 0.08
         if p.kind == "field" and roots(p.topic) <= query:
             score += 0.10
+        if requested_fields and not requested_fields & roots(p.text):
+            score -= 0.35
+        title = p.path.split(" / ")[1 if p.scope else 0].casefold()
+        if wanted_entities and not all(entity in title for entity in wanted_entities):
+            score -= 0.45
         if p.kind == "fields":
             labels = [roots(match[1]) for match in re.finditer(
                 r"^[•◼➢❖▪]\s*([^:]+):", p.text, re.MULTILINE
@@ -210,6 +241,8 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
                 common = set.intersection(*labels)
                 if common & query:
                     score += 0.18
+            if targets and targets & roots(p.text):
+                score += 0.12
         if "esempio" in p.text.casefold() and "esempio" not in question.casefold():
             score -= 0.08
         scores.append(score)
@@ -222,11 +255,21 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
     ranked = sorted(range(len(scores)), key=lambda index: scores[index], reverse=True)
     best = ranked[0]
     selected = [best]
+    first = passages[best]
+    query = roots(question)
+    # Una procedura generale può rimandare al dettaglio dell'operazione richiesta.
+    if first.kind == "steps":
+        for index in ranked[1:]:
+            p = passages[index]
+            if (p.document_id == first.document_id and p.scope == first.scope
+                    and p.path.startswith(first.path + " / ") and p.kind == "prose"
+                    and roots(p.topic) & query and scores[index] >= scores[best] - 0.30):
+                selected.append(index)
+                break
     # Una domanda su più parametri deve coprire i diversi nomi, non solo uno.
     if re.search(r"\be\b|\bquali\b", question, re.IGNORECASE):
         query = roots(question)
         covered = roots(passages[best].text) & query
-        first = passages[best]
         for index in ranked[1:]:
             p = passages[index]
             if p.document_id != first.document_id or p.scope != first.scope:
@@ -234,7 +277,7 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
             if scores[index] < scores[best] - 0.16:
                 continue
             matched = roots(p.text) & query
-            if len(matched - covered) and len(roots(p.topic) & query) >= 2:
+            if len(matched - covered) and roots(p.topic) & query:
                 selected.append(index)
                 covered.update(matched)
             if len(selected) >= 3:

@@ -90,3 +90,22 @@ def test_repeated_opening_steps_belong_to_both_procedures():
     assert 'Selezionare la risorsa' in activation.text
     assert 'Aprire il menu' in activation.text
     assert 'Premere Associa' not in activation.text
+
+
+def test_question_tail_preserves_the_requested_operation():
+    from manuali_rag.structure import focus_question, target_terms
+
+    assert focus_question('Ho inserito i dati: come li salvo?') == 'come li salvo?'
+    assert target_terms('Quali orari imposto per gli slot?') == {'ora'}
+    assert target_terms('Quale codice devo usare?') == {'codic'}
+
+
+def test_specific_provider_context_wins_over_an_incidental_provider_mention():
+    passages = passages_from_hits([hit(1,
+        'GESTIONE ALFA:\n\n1. Creazione risorsa\n\nIl codice sarà usato anche dal provider.\n\n'
+        '2. Dettaglio risorsa\n\nPremere Apri.\n\n'
+        'GESTIONE BETA:\n\n1. Creazione Provider\n\n• Codice: inserire il codice della risorsa.\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    scores = rank_scores('Quale codice uso nel Provider?', passages, [0.6] * len(passages))
+    best = passages[max(range(len(scores)), key=scores.__getitem__)]
+    assert best.scope == 'GESTIONE BETA'
