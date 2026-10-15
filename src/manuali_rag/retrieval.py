@@ -4,13 +4,14 @@ import hashlib
 import json
 import math
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 from .config import Settings
 from .embeddings import Embedder, embed_query
 from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
+from .structure import passages_from_hits, rank_scores, roots, scope_tags, select_passages
 
 IDENTIFIER_RE = re.compile(r"\b(?=[A-Z0-9-]*[A-Z])(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[A-Z0-9]+)*\b")
 CLARIFICATION_TEXT = (
@@ -603,6 +604,55 @@ class AnswerService:
         self.llm = llm
         self.settings = settings
 
+    def _structured_answer(
+        self, question: str, hits: list[SearchHit], document_id: str | None,
+    ) -> Answer | None:
+        passages = passages_from_hits(self.retriever.store.all_hits(document_id))
+        if not passages:
+            return None
+        structured_ids = {p.document_id for p in passages}
+        explicit = bool(scope_tags(passages) & set(FTS_TOKEN_RE.findall(question.casefold())))
+        mandatory = document_id in structured_ids or explicit
+        missing = Answer("Le fonti fornite non contengono questa informazione.", [])
+        available = set().union(*(roots(p.contextual) for p in passages))
+        query_terms = roots(question)
+        if not query_terms & available:
+            return missing if mandatory else None
+        evidence = [(index, p.text) for index, p in enumerate(passages)]
+        if not _credential_value_supported(question, evidence) or not _price_value_supported(question, evidence):
+            return missing if mandatory else None
+        query = embed_query(self.retriever.embedder, question)
+        vectors = self.retriever._cached_vectors([p.contextual for p in passages])
+        similarities = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
+        scores = rank_scores(question, passages, similarities)
+        best = max(range(len(scores)), key=scores.__getitem__)
+        body_terms = roots(passages[best].text)
+        topic_terms = roots(passages[best].topic)
+        if (scores[best] < 0.65 or similarities[best] < 0.35
+                or not (query_terms & body_terms)
+                or not mandatory and not query_terms & topic_terms):
+            return missing if mandatory else None
+        competitors = [hit.semantic_score or 0 for hit in hits if hit.document_id not in structured_ids]
+        if competitors and max(competitors) > scores[best] + 0.06 and not mandatory:
+            return None
+        selected = select_passages(question, passages, scores)
+        parts = [part for index in selected for part in passages[index].parts]
+        sources: list[SearchHit] = []
+        lines = []
+        seen = set()
+        for hit, text in parts:
+            key = (hit.chunk_id, text)
+            if key in seen:
+                continue
+            seen.add(key)
+            source = next((i for i, existing in enumerate(sources, start=1)
+                           if existing.chunk_id == hit.chunk_id), None)
+            if source is None:
+                sources.append(replace(hit, semantic_score=scores[best], score=scores[best]))
+                source = len(sources)
+            lines.append(f"{text} [S{source}]")
+        return Answer("\n".join(lines), sources)
+
     def _search_question(self, question: str) -> str:
         normalized = re.sub(
             r"\b(?:ho|ha|abbiamo)\s+(?:fatto|effettuato)\s+(?:l['’])?accesso\b(?!\s+all?[aeo]?\b)",
@@ -657,6 +707,10 @@ class AnswerService:
             question, top_k=max(top_k or 5, 8) if semantic else top_k,
             document_id=document_id,
         )
+        if semantic:
+            structured = self._structured_answer(question, hits, document_id)
+            if structured is not None:
+                return structured
         if semantic:
             named = [hit for hit in hits if _has_named_control(question, hit.content)]
             if named:
