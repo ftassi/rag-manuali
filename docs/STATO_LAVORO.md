@@ -6,6 +6,59 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Secondo manuale: collaudo AGENDE — 15 ottobre 2026
+
+Importato sul Raspberry il PDF già presente nella sottocartella `Manuali Hero`
+della cartella locale dei manuali. Documento `1a163f3ed21da8da`: nove pagine,
+otto chunk, nessun avviso. QARA e documento sintetico conservati: indice misto
+con tre documenti e 236 chunk. Prima dell'importazione creato un backup SQLite
+in `data/backups/before-agende-import-20261015T164859Z.sqlite3`.
+
+Strumento di collaudo `c2f295e`: aggiunto controllo facoltativo
+`expected_document_ids`, con identificativi delle fonti registrati nel report.
+Una pagina del manuale sbagliato non passa più per sola coincidenza del numero.
+Lint e **68 test** superati sul Raspberry; comportamento applicativo invariato
+rispetto a `e555e6c`.
+
+Predisposti 26 casi privati, da lettura completa e verifica visiva delle pagine:
+17 domande sul contenuto, due positive con scope esplicito, due controlli QARA,
+quattro richieste senza risposta (due limitate al documento) e una ambigua.
+Casi in `data/evaluations/agende-cases-2026-10-15.json`.
+Regressione QARA predisposta senza scope e con vincolo sul documento corretto:
+`data/evaluations/qara-multimanual-cases-2026-10-15.json` (51 casi).
+I primi risultati mostrano titoli senza istruzioni, scambio di sezioni interne
+al secondo manuale e passaggi mancanti; non bastano citazioni e immagini disponibili.
+
+**Esito rivisto: 12/26, collaudo non superato.** Inizialmente 10/26; due risposte
+sul codice sono state accettate e riprovate perché pagina 1 fornisce un'indicazione
+equivalente a pagina 6. Criteri, report iniziale e ripetizione restano conservati.
+Nessuna modifica applicativa effettuata per migliorare questi risultati.
+
+| Categoria | Superati | Totale |
+| --- | ---: | ---: |
+| Informazioni presenti in AGENDE, ricerca libera | 4 | 17 |
+| Informazioni presenti, documento limitato via API | 2 | 2 |
+| Controlli QARA nell'indice misto | 2 | 2 |
+| Informazioni assenti, incluse due richieste con scope | 3 | 4 |
+| Richiesta ambigua | 1 | 1 |
+
+Restano 13 risposte positive incomplete, non pertinenti o erroneamente rifiutate,
+e una falsa risposta per un'informazione assente nel documento selezionato.
+Fonti caricate e appartenenza al documento non garantiscono la pertinenza della sezione.
+Il difetto si manifesta anche limitando esplicitamente la ricerca al secondo PDF.
+
+**Regressione QARA nell'indice misto: 51/51**, con ricerca libera e vincolo sul
+documento citato. Report privato `qara-multimanual-report-2026-10-15.json`.
+Risultato AGENDE iniziale in `agende-report-2026-10-15.json`, rivisto in
+`agende-reviewed-report-2026-10-15.json`; il secondo riporta i riferimenti
+all'originale e a `agende-provider-review-report.json` (due casi ripetuti).
+Criteri rivisti in `agende-reviewed-cases-2026-10-15.json`; file iniziale invariato.
+
+Funzionamento locale verificato nella slice con rete esterna negata dal kernel:
+domanda AGENDE con risposta nota, pagina citata, interfaccia e importazione sintetica
+HTTP **6/6**. `make health` e `make ollama-check` superati; nessuna nuova prova
+fisica senza Wi-Fi. Questo conferma l'esecuzione locale, non risolve i 14 casi falliti.
+
 ## Riscontro pratico successivo — 15 ottobre 2026
 
 La prova personale sul codice pubblicato `8468371` evidenzia altri limiti:
@@ -233,13 +286,17 @@ I 23/23 casi precedenti non vanno estesi alle nuove formulazioni, che mostrano l
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** importare e collaudare un secondo manuale, controllando
-   l'isolamento delle fonti e le risposte tra documenti.
-2. Aggiungere il selettore dei manuali per limitare esplicitamente la ricerca.
+1. **Consigliato:** correggere recupero delle sezioni e completezza di procedure
+   e liste del secondo manuale; ripetere i 26 casi rivisti e i 51 QARA nell'indice misto.
+   Escludere titoli come risposta e distinguere i due contesti interni del PDF.
+2. Aggiungere il selettore dei manuali, utile per lo scope ma insufficiente a
+   risolvere gli scambi fra sezioni interne dello stesso documento.
 3. Ridurre le frasi superflue nelle risposte conservando istruzioni e condizioni.
 
-La verifica personale dei tre casi pratici è completata con gli esiti sopra riportati.
-Gli esiti precedenti restano riferiti al loro codice e ai loro criteri.
+Il collaudo del secondo manuale è completato con esito non superato; importazione,
+funzionamento locale e regressione QARA sono verificati. Le correzioni applicative
+per il nuovo manuale restano da eseguire. Nessuna nuova prova personale richiesta
+prima di correggere i limiti già misurati.
 
 ## Come riprendere lo sviluppo
 

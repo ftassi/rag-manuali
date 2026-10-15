@@ -596,3 +596,56 @@ e il funzionamento di interfaccia, procedura della nota salvata e immagine citat
 Per la prova personale aggiorna il browser con `Ctrl+Shift+R`, disattiva il Wi-Fi e
 ripeti i casi pratici. Successivamente si può collaudare un secondo manuale oppure
 aggiungere un selettore dei manuali.
+
+
+## 17. Secondo manuale e verifica delle fonti
+
+Il secondo PDF importato è presente nella sottocartella `Manuali Hero` della
+cartella locale dei manuali. L'indice contiene ora tre documenti: due manuali
+PDF e il file sintetico della prova offline. Importazione effettuata senza
+pubblicare il PDF, i casi o le risposte su GitHub.
+
+Il collaudo multi-manuale controlla anche l'identità del documento, oltre a fatti,
+pagine, citazioni e immagini. Distinguere le sezioni interne dello stesso PDF
+rimane necessario: scegliere il manuale non risolve una confusione fra procedure
+contenute nello stesso documento.
+
+Per ripetere i nuovi casi:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
+  --cases data/evaluations/agende-reviewed-cases-2026-10-15.json \
+  --output data/evaluations/agende-next.json \
+  --api-url http://127.0.0.1:8000
+```
+
+Per ripetere i 51 casi QARA nell'indice misto, usare invece
+`data/evaluations/qara-multimanual-cases-2026-10-15.json`, salvando un nuovo report.
+Questa versione dei criteri non limita la ricerca al solo QARA e rifiuta fonti
+di altri documenti, anche se il numero di pagina coincide.
+
+
+### Esito del primo collaudo multi-manuale
+
+**AGENDE: 12/26 dopo revisione, non superato.** Il primo report era 10/26;
+due risposte equivalenti da una pagina alternativa sono state accettate e riprovate.
+Delle 19 richieste con risposta attesa nel nuovo manuale, 6 sono passate; gli altri
+casi includono controlli QARA, informazioni assenti e ambiguità. Restano risposte
+con soli titoli, procedure incomplete, sezioni scambiate e un'istruzione arbitraria
+quando l'informazione manca nel documento limitato.
+
+I **51 casi QARA sono passati** anche senza limitare la ricerca al QARA e
+controllando il documento citato. Importazione senza avvisi, lint e 68 test
+superati; prova locale AGENDE nella slice senza accesso esterno e HTTP 6/6 superati.
+Questi controlli tecnici non rendono corrette le risposte fallite.
+
+Report e criteri rivisti restano in `data/evaluations/` sul Raspberry:
+`agende-reviewed-report-2026-10-15.json`, `agende-reviewed-cases-2026-10-15.json`
+e `qara-multimanual-report-2026-10-15.json`. Il report iniziale AGENDE è conservato
+insieme alla ripetizione dei due casi con fonte alternativa.
+
+Prossimo passo consigliato: correggere selezione delle sezioni e completezza dei
+passaggi del nuovo manuale, poi ripetere entrambi i gruppi. Il selettore dei manuali
+è un'alternativa utile per scegliere il documento, ma non corregge da solo questi
+errori interni al PDF. La sintesi delle risposte resta un miglioramento separato.
