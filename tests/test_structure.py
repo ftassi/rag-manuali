@@ -158,3 +158,16 @@ def test_complementary_parameters_are_not_competing_contexts():
         '2. Uscita\n\nPremere Chiudi.')])
     assert confident_context(passages, [0.60, 0.59, 0.2], 0)
     assert not confident_context(passages, [0.60, 0.59, 0.59], 0)
+
+
+def test_shared_subject_does_not_add_an_unrequested_introduction():
+    passages = passages_from_hits([hit(1,
+        '1. Creazione Client\n\nSe il Client non esiste, procedere con la creazione.\n\n'
+        'Nella sezione Destinatari, associare i reparti abilitati.\n\n'
+        'Nella sezione Origini, associare i fornitori configurati.\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    selected = select_passages('Nel Client quali reparti e quali fornitori associo?',
+                               passages, [0.75, 0.8, 0.85, 0.1])
+    text = ' '.join(passages[i].text for i in selected)
+    assert 'reparti abilitati' in text and 'fornitori configurati' in text
+    assert 'non esiste' not in text

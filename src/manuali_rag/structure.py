@@ -299,8 +299,9 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
     # Una domanda su più parametri deve coprire i diversi nomi, non solo uno.
     if re.search(r"\be\b|\bquali\b", question, re.IGNORECASE):
         query = roots(question)
-        covered = roots(passages[best].text) & query
-        covered_topics = roots(first.topic) & query
+        context = roots(first.chapter) | roots(first.scope)
+        covered = (roots(passages[best].text) | context) & query
+        covered_topics = (roots(first.topic) | context) & query
         for index in ranked[1:]:
             p = passages[index]
             if p.document_id != first.document_id or p.scope != first.scope:
