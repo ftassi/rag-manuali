@@ -199,6 +199,21 @@ def scope_tags(passages: list[Passage]) -> set[str]:
             and token not in {"manuale", "utente", "guida", "configurazione"}}
 
 
+def ambiguous_choice(question: str, passages: list[Passage], scores: list[float]) -> bool:
+    if not scores:
+        return False
+    tags = scope_tags(passages) & set(FTS_TOKEN_RE.findall(question.casefold()))
+    if len(tags) == 1:
+        return False
+    best = max(range(len(scores)), key=scores.__getitem__)
+    first = passages[best]
+    return any(
+        (p.document_id, p.scope) != (first.document_id, first.scope)
+        and scores[index] >= 0.65 and scores[best] - scores[index] <= 0.04
+        for index, p in enumerate(passages)
+    )
+
+
 def rank_scores(question: str, passages: list[Passage], similarities: list[float]) -> list[float]:
     """Il soggetto della sezione pesa più delle citazioni incidentali nel testo."""
     query = roots(focus_question(question))
@@ -287,7 +302,8 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
                 continue
             matched = roots(p.text) & query
             topics = roots(p.topic) & query
-            if (matched - covered or topics - covered_topics) and topics:
+            if ((matched - covered and (topics or p.kind == "prose"))
+                    or topics - covered_topics):
                 selected.append(index)
                 covered.update(matched)
                 covered_topics.update(topics)

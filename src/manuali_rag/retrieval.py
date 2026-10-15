@@ -12,6 +12,7 @@ from .embeddings import Embedder, embed_query
 from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
 from .structure import (
+    ambiguous_choice,
     focus_question,
     passages_from_hits,
     rank_scores,
@@ -655,6 +656,8 @@ class AnswerService:
         competitors = [hit.semantic_score or 0 for hit in hits if hit.document_id not in structured_ids]
         if competitors and max(competitors) > scores[best] + 0.06 and not mandatory:
             return None
+        if ambiguous_choice(question, passages, scores):
+            return Answer(CLARIFICATION_TEXT, [])
         selected = select_passages(focused, passages, scores)
         parts = [part for index in selected for part in passages[index].parts]
         sources: list[SearchHit] = []

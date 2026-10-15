@@ -109,3 +109,27 @@ def test_specific_provider_context_wins_over_an_incidental_provider_mention():
     scores = rank_scores('Quale codice uso nel Provider?', passages, [0.6] * len(passages))
     best = passages[max(range(len(scores)), key=scores.__getitem__)]
     assert best.scope == 'GESTIONE BETA'
+
+
+def test_parallel_fields_can_be_requested_by_their_contents_instead_of_labels():
+    passages = passages_from_hits([hit(1,
+        '1. Associazione risorse\n\n'
+        'Nella sezione Destinatari, associare i reparti abilitati.\n\n'
+        'Nella sezione Origini, associare i fornitori configurati.\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    selected = select_passages('Quali reparti e quali fornitori associo?', passages, [0.8, 0.85, 0.1])
+    texts = ' '.join(passages[i].text for i in selected)
+    assert 'reparti abilitati' in texts and 'fornitori configurati' in texts
+
+
+def test_equally_supported_different_scopes_need_clarification():
+    from manuali_rag.structure import ambiguous_choice
+
+    passages = passages_from_hits([hit(1,
+        'GESTIONE ALFA:\n\n1. Codici risorsa\n\n• Codice: uno\n\n'
+        '2. Uscita\n\nPremere Chiudi.\n\n'
+        'GESTIONE BETA:\n\n1. Codici risorsa\n\n• Codice: due\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    candidates = [p for p in passages if p.kind == 'field']
+    assert ambiguous_choice('Quale codice inserisco?', candidates, [0.8, 0.81])
+    assert not ambiguous_choice('In ALFA quale codice inserisco?', candidates, [0.8, 0.81])
