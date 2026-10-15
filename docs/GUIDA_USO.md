@@ -584,8 +584,11 @@ Sul codice `e555e6c`, **67 test** e collaudo complessivo **51/51** superati sul
 Raspberry. I cinque casi pratici mirati erano già passati sul codice `ea0a689`;
 il giro completo include anche il successivo riordino delle anteprime.
 Report privato: `data/evaluations/qara-all-workflows-2026-10-15.json`.
-La verifica personale dopo questa correzione resta da eseguire: i risultati
-valgono per i casi provati, non per ogni possibile formulazione.
+La successiva verifica personale del 15 ottobre è confermata dall'utente:
+nota salvata e proprie note con risposte accettabili e immagini corrette;
+ripristino filtri con risposta e immagini corrette. Nella risposta sulla nota
+salvata rimangono frasi superflue, pur con procedimento corretto nella parte finale.
+I risultati valgono per i casi provati, non per ogni possibile formulazione.
 
 Anche regressione sintetica **11/11**, controlli HTTP **6/6** e controlli di salute
 sono passati. La prova nella slice locale ha verificato il blocco della rete esterna

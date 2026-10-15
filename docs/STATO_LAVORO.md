@@ -49,8 +49,23 @@ Regressione sintetica **11/11** (`/tmp/qara-workflows-e2e.json` sul Raspberry), 
 accesso esterno negato dal kernel, interfaccia e nuova procedura della nota salvata
 con immagine funzionanti. Entrambi i servizi attivi nella slice locale, senza
 riavvii automatici; indice principale invariato, due documenti e 228 chunk.
-Non è una nuova prova fisica senza Wi-Fi: il riscontro personale dopo la
-correzione resta da eseguire. Modelli e manuali rimangono locali.
+La verifica nella slice è distinta dalla successiva prova personale descritta sotto.
+Modelli e manuali rimangono locali.
+
+## Conferma personale dopo la correzione — 15 ottobre 2026
+
+Sulla versione pubblicata `6cae616` l'utente conferma:
+
+- Correzione di una nota salvata: risposta accettabile, procedimento corretto
+  nella parte finale e immagini corrette; rimangono alcune frasi superflue.
+- Visualizzazione delle proprie note: risposta accettabile e immagini corrette,
+  anche nella variante con il punto prima della richiesta di istruzioni.
+- Ripristino dei filtri: risposta e immagini corrette.
+
+Questi sono riscontri dell'utente nel browser del Raspberry dopo le istruzioni
+per la prova offline, distinti dai 51 casi automatici. Non sono stati eseguiti
+nuovi test automatici in questo passaggio. Resta aperto il miglioramento della
+sintesi, senza perdere passaggi necessari o condizioni.
 
 
 ## Correzione di recupero e ambiguità — codice `ff00bfc`
@@ -218,17 +233,13 @@ I 23/23 casi precedenti non vanno estesi alle nuove formulazioni, che mostrano l
 
 ## Prossimo passo e opzioni
 
-1. **Consigliato:** ripetere nel browser del Raspberry, con Wi-Fi disattivato,
-   i casi pratici di nota salvata, proprie note e ripristino filtri; aggiornare
-   con `Ctrl+Shift+R`, verificare testo completo e pagine pertinenti. La nota
-   già salvata va specificata nella domanda; la precedente frase ambigua
-   deve chiedere di distinguere modifica salvata e annullamento prima del salvataggio.
-2. Importare e collaudare un secondo manuale, controllando le risposte tra documenti.
-3. Aggiungere il selettore dei manuali per limitare esplicitamente la ricerca.
+1. **Consigliato:** importare e collaudare un secondo manuale, controllando
+   l'isolamento delle fonti e le risposte tra documenti.
+2. Aggiungere il selettore dei manuali per limitare esplicitamente la ricerca.
+3. Ridurre le frasi superflue nelle risposte conservando istruzioni e condizioni.
 
-Le correzioni della prova pratica e il collaudo di 51 casi sono completati sul
-Raspberry. Atteso il riscontro personale dopo l'aggiornamento; gli esiti precedenti
-restano riferiti al loro codice e ai loro criteri.
+La verifica personale dei tre casi pratici è completata con gli esiti sopra riportati.
+Gli esiti precedenti restano riferiti al loro codice e ai loro criteri.
 
 ## Come riprendere lo sviluppo
 
