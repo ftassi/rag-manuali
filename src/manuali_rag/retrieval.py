@@ -13,6 +13,7 @@ from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
 from .structure import (
     ambiguous_choice,
+    authentication_supported,
     confident_context,
     focus_question,
     passages_from_hits,
@@ -632,6 +633,8 @@ class AnswerService:
         explicit = explicit or bool(subjects & roots(question))
         mandatory = document_id in structured_ids or explicit
         missing = Answer("Le fonti fornite non contengono questa informazione.", [])
+        if not authentication_supported(question, passages):
+            return missing if mandatory else None
         available = set().union(*(roots(p.contextual) for p in passages))
         query_terms = roots(question)
         if not query_terms & available:

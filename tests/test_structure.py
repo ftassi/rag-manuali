@@ -171,3 +171,17 @@ def test_shared_subject_does_not_add_an_unrequested_introduction():
     text = ' '.join(passages[i].text for i in selected)
     assert 'reparti abilitati' in text and 'fornitori configurati' in text
     assert 'non esiste' not in text
+
+
+def test_initial_time_field_does_not_support_initial_login_credentials():
+    from manuali_rag.structure import authentication_supported
+
+    unrelated = passages_from_hits([hit(1,
+        'GESTIONE ALFA:\n\n1. Pianificazione\n\n• Ora inizio: 08:00\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    assert not authentication_supported('Come faccio il login con password iniziale?', unrelated)
+    assert authentication_supported('Come imposto l’ora inizio?', unrelated)
+    relevant = passages_from_hits([hit(1,
+        'GESTIONE ALFA:\n\n1. Autenticazione\n\nInserire nome utente e password.\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    assert authentication_supported('Come faccio il login?', relevant)

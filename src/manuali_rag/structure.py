@@ -199,6 +199,16 @@ def scope_tags(passages: list[Passage]) -> set[str]:
             and token not in {"manuale", "utente", "guida", "configurazione"}}
 
 
+def authentication_supported(question: str, passages: list[Passage]) -> bool:
+    authentication = re.compile(
+        r"password|credenzial|login|autentic|username|nome\s+utente|single\s+sign|\bSSO\b",
+        re.IGNORECASE,
+    )
+    return not authentication.search(question) or any(
+        authentication.search(p.contextual) for p in passages
+    )
+
+
 def ambiguous_choice(question: str, passages: list[Passage], scores: list[float]) -> bool:
     if not scores:
         return False
