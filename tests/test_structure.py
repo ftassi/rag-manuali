@@ -133,3 +133,16 @@ def test_equally_supported_different_scopes_need_clarification():
     candidates = [p for p in passages if p.kind == 'field']
     assert ambiguous_choice('Quale codice inserisco?', candidates, [0.8, 0.81])
     assert not ambiguous_choice('In ALFA quale codice inserisco?', candidates, [0.8, 0.81])
+
+
+def test_parallel_request_does_not_exclude_a_value_with_a_different_label():
+    passages = passages_from_hits([hit(1,
+        '1. Creazione Server\n\n• Servizi forniti: dati disponibili.\n\n'
+        '2. Creazione Client\n\n'
+        'Nella sezione Destinatari, associare i reparti abilitati.\n\n'
+        'Nella sezione Origini, associare i fornitori configurati.')])
+    question = 'Nel Client quali reparti associo e quali fornitori?'
+    scores = rank_scores(question, passages, [0.6] * len(passages))
+    selected = select_passages(question, passages, scores)
+    text = ' '.join(passages[i].text for i in selected)
+    assert 'reparti abilitati' in text and 'fornitori configurati' in text

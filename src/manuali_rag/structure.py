@@ -230,6 +230,7 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
     procedural = bool(re.search(r"\bcome\b|da dove|quali passi", question, re.IGNORECASE))
     field_names = set().union(*(roots(p.topic) for p in passages if p.kind == "field"))
     requested_fields = (targets or query) & field_names
+    parallel = bool(re.search(r"\bquali\b.+\be\b", question, re.IGNORECASE))
     entities = set()
     for p in passages:
         title = p.path.split(" / ")[1 if p.scope else 0]
@@ -243,7 +244,7 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
             score += 0.08
         if p.kind == "field" and roots(p.topic) <= query:
             score += 0.10
-        if requested_fields and not requested_fields & roots(p.text):
+        if requested_fields and not requested_fields & roots(p.text) and not parallel:
             score -= 0.35
         title = p.path.split(" / ")[1 if p.scope else 0].casefold()
         if wanted_entities and not all(entity in title for entity in wanted_entities):
