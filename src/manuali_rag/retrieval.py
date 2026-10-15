@@ -17,6 +17,43 @@ CLARIFICATION_TEXT = (
     "Di quale funzione o schermata del software stai parlando? "
     "Specifica cosa vuoi aprire o quale operazione vuoi eseguire."
 )
+EDIT_CLARIFICATION_TEXT = (
+    "Vuoi correggere una nota già salvata oppure annullare modifiche non ancora salvate? "
+    "Le due operazioni richiedono passaggi diversi."
+)
+
+
+def _personal_scope(question: str) -> bool:
+    return bool(re.search(
+        r"\b(?:scritt|fatt|creat|inserit|registrat|redatt)\w*\s+da\s+me\b|\b(?:mie|miei)\b",
+        question, re.IGNORECASE,
+    ))
+
+
+def _personal_scope_selection(
+    question: str, excerpts: list[tuple[int, str]], scores: list[float]
+) -> list[int] | None:
+    if not _personal_scope(question):
+        return None
+    matches = [index for index, (_, text) in enumerate(excerpts)
+               if re.search(r"\bda me\b|\bpropri\w*\b|utente (?:corrente|connesso)", text, re.IGNORECASE)
+               and scores[index] >= 0.35]
+    return [max(matches, key=lambda index: scores[index]) + 1] if matches else []
+
+
+def _complete_filter_steps(
+    selected: list[int], excerpts: list[tuple[int, str]], hits: list[SearchHit]
+) -> list[int]:
+    # L'applicazione è una dipendenza della selezione, anche sulla pagina successiva.
+    filter_sources = [hits[excerpts[index - 1][0] - 1] for index in selected
+                      if re.search(r"filtr", excerpts[index - 1][1], re.IGNORECASE)]
+    confirmations = [index for index, (source, text) in enumerate(excerpts, start=1)
+                     if re.search(r"conferm.*applic.*filtr", text, re.IGNORECASE)
+                     and any(hit.document_id == hits[source - 1].document_id
+                             and hit.page is not None and hits[source - 1].page is not None
+                             and abs(hit.page - hits[source - 1].page) <= 1
+                             for hit in filter_sources)]
+    return [index for index in selected if index not in confirmations] + confirmations
 
 
 def _needs_clarification(question: str) -> bool:
@@ -52,6 +89,8 @@ class Answer:
 
 def _source_sentences(excerpt: str) -> list[str]:
     sentences = []
+    # Mantiene separati i controlli descritti su righe numerate di una tabella PDF.
+    excerpt = re.sub(r"\n\s*(\d{1,2})\s+(?=[A-ZÀ-Ý])", r"\n\n\1 ", excerpt)
     for block in excerpt.split("\n\n"):
         normalized = " ".join(block.split())
         if re.search(r"\.{3,}", normalized):
@@ -399,6 +438,26 @@ def _procedure_selection(
         focused = _focused_section(hit.content, question)
         if focused and re.search(r"(?:^|\s)1\.\s", focused):
             return [index for index, (number, _) in enumerate(excerpts, start=1) if number == source]
+        # Un'operazione di correzione non è una semplice consultazione del dettaglio.
+        if re.search(r"corregg|corregger|modific", question, re.IGNORECASE) and not re.search(
+            r"annull|cronolog|storico|version", question, re.IGNORECASE
+        ):
+            for heading in hit.content.split("\n\n"):
+                match = re.fullmatch(r"\d+(?:\.\d+)+\s+Modifica\s+(.+)", heading.strip())
+                if not match or not (_term_features(match[1]) & _term_features(question)):
+                    continue
+                steps = [index for index, (number, text) in enumerate(excerpts, start=1)
+                         if number == source and not text.startswith(("•", "◼", "➢", "❖", "o "))
+                         and re.search(r"clicc|pulsante|icona", text, re.IGNORECASE)]
+                if steps:
+                    opening = [index for index, (number, text) in enumerate(excerpts, start=1)
+                               if re.search(r"cliccando sulla|selezionare", text, re.IGNORECASE)
+                               and re.search(r"contenuto.*(?:espanso|destra)", text, re.IGNORECASE)
+                               and _term_features(match[1]) & _term_features(text)
+                               and hits[number - 1].document_id == hit.document_id
+                               and hits[number - 1].page is not None and hit.page is not None
+                               and 0 < hit.page - hits[number - 1].page <= 2]
+                    return opening[:1] + steps
     return None
 
 
@@ -556,6 +615,8 @@ class AnswerService:
         normalized = re.sub(
             r"\brichiud\w*\b", "chiudere", normalized, flags=re.IGNORECASE,
         )
+        normalized = re.sub(r"\bcorregg\w*|\bcorregger\w*", "modificare", normalized,
+                            flags=re.IGNORECASE)
         if re.search(r"riconosc|riconosco|sto guardando", question, re.IGNORECASE):
             normalized = re.sub(
                 r"come\s+riconosco", "come viene evidenziato", normalized, flags=re.IGNORECASE,
@@ -575,6 +636,10 @@ class AnswerService:
     ) -> Answer:
         if _needs_clarification(question):
             return Answer(text=CLARIFICATION_TEXT, sources=[])
+        if (re.search(r"sbagliat|errore", question, re.IGNORECASE)
+                and re.search(r"annull", question, re.IGNORECASE)
+                and not re.search(r"salvat|inserimento|prima di|ancora", question, re.IGNORECASE)):
+            return Answer(text=EDIT_CLARIFICATION_TEXT, sources=[])
         search_question = question
         semantic = self.settings.embedding_provider == "openai"
         if semantic:
@@ -605,6 +670,31 @@ class AnswerService:
                     named = [hit for hit in hits if _has_named_control(search_question, hit.content)]
                     if named:
                         hits = named
+            # Le istruzioni di applicazione possono continuare alla pagina seguente.
+            if _personal_scope(question) or re.search(r"filtr", question, re.IGNORECASE):
+                neighbors = [hit for hit in hits if re.search(
+                    r"filtr", _page_context(hit.content), re.IGNORECASE
+                )]
+                seen = {hit.chunk_id for hit in hits}
+                if neighbors:
+                    hits.extend(hit for hit in self.retriever.store.all_hits(document_id)
+                                if hit.chunk_id not in seen and any(
+                                    hit.document_id == anchor.document_id
+                                    and hit.page is not None and anchor.page is not None
+                                    and hit.page == anchor.page + 1 for anchor in neighbors))
+            if re.search(r"corregg|corregger|modific", question, re.IGNORECASE) and not re.search(
+                r"annull|cronolog|storico|version", question, re.IGNORECASE
+            ):
+                anchors = [hit for hit in hits if re.search(
+                    r"^\d+(?:\.\d+)+\s+Modifica\s+", hit.content, re.MULTILINE
+                )]
+                seen = {hit.chunk_id for hit in hits}
+                if anchors:
+                    hits.extend(hit for hit in self.retriever.store.all_hits(document_id)
+                                if hit.chunk_id not in seen and any(
+                                    hit.document_id == anchor.document_id
+                                    and hit.page is not None and anchor.page is not None
+                                    and 0 < anchor.page - hit.page <= 2 for anchor in anchors))
         if not hits:
             return Answer(
                 text="Non ho trovato informazioni pertinenti nei manuali indicizzati.",
@@ -658,7 +748,9 @@ class AnswerService:
             scores = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
             scores = _lexical_evidence_scores(search_question, contextual, scores)
             ranked = sorted(range(len(scores)), key=lambda i: scores[i], reverse=True)
-            direct = _visual_indicator_selection(question, excerpts, scores)
+            direct = _personal_scope_selection(question, excerpts, scores)
+            if direct is None:
+                direct = _visual_indicator_selection(question, excerpts, scores)
             requested_ids = set(IDENTIFIER_RE.findall(question.upper()))
             if requested_ids and re.search(r"\b(?:quali?|quali)\b.*(?:messaggi|codici)", question, re.IGNORECASE):
                 coded = [index for index in ranked
@@ -742,7 +834,10 @@ class AnswerService:
                     }}, "required": ["quotes"], "additionalProperties": False,
                 },
             })
-        selected = _procedure_selection(question, hits, excerpts)
+        selected = direct if _personal_scope(question) else None
+        if selected is None:
+            selected = _procedure_selection(question, hits, excerpts)
+        procedure_selected = selected is not None and not _personal_scope(question)
         if selected is None and re.search(
             r"serve|acced|access|visualizz|vedere|vedo|trovo|trovare|aprire|apro|ottenere",
             question, re.IGNORECASE,
@@ -792,7 +887,7 @@ class AnswerService:
                 "Consulta le pagine indicate."
             )
         else:
-            if selected and scores:
+            if selected and scores and not procedure_selected:
                 source_scores: dict[int, float] = {}
                 for index in selected:
                     source = excerpts[index - 1][0]
@@ -801,7 +896,14 @@ class AnswerService:
                 selected = [index for index in selected
                             if source_scores[excerpts[index - 1][0]] >= strongest - self.settings.answer_ambiguity_margin]
             selected = _complete_paragraph_selection(selected, excerpts, hits, question)
-            text = _render_excerpts(_complete_list_selection(selected, excerpts), excerpts)
+            selected = _complete_list_selection(selected, excerpts)
+            if procedure_selected:
+                selected.sort(key=lambda index: (
+                    hits[excerpts[index - 1][0] - 1].document_id,
+                    hits[excerpts[index - 1][0] - 1].page or 0, index,
+                ))
+            selected = _complete_filter_steps(selected, excerpts, hits)
+            text = _render_excerpts(selected, excerpts)
             if not selected:
                 hits = []
         cited = {int(index) for index in re.findall(r"\[S(\d+)\]", text)}

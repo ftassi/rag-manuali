@@ -636,3 +636,56 @@ def test_visual_recognition_selects_appearance_instead_of_opening_instruction() 
     ) == [2]
     assert _visual_indicator_selection("Come apro il pannello?", excerpts, [0.8, 0.65]) is None
     assert _visual_indicator_selection("Come riconosco l'elemento?", excerpts, [0.1, 0.1]) is None
+
+
+def test_personal_scope_cannot_be_replaced_by_generic_viewing() -> None:
+    from manuali_rag.retrieval import _personal_scope_selection
+
+    excerpts = [(1, 'Premere Visualizza per aprire il dettaglio.'),
+                (2, 'Pulsanti per filtrare: Fatte da me, solo documenti allegati.')]
+    assert _personal_scope_selection('Voglio le note scritte da me.', excerpts, [0.9, 0.5]) == [2]
+    assert _personal_scope_selection('Voglio le mie note.', excerpts[:1], [0.9]) == []
+    assert _personal_scope_selection('Come apro il dettaglio?', excerpts, [0.9, 0.5]) is None
+
+
+def test_filter_confirmation_follows_selection_and_stays_in_the_same_document() -> None:
+    from manuali_rag.retrieval import _complete_filter_steps
+
+    first, following, unrelated = _hit(1, 0.6), _hit(2, 0.5), _hit(3, 0.9)
+    following.document_id = first.document_id
+    excerpts = [(1, 'La funzione Ripristina riporta il filtro al valore iniziale.'),
+                (2, 'Il pulsante di conferma serve ad applicare i filtri.'),
+                (3, 'Premere Conferma per applicare i filtri.')]
+    assert _complete_filter_steps([1], excerpts, [first, following, unrelated]) == [1, 2]
+    assert _complete_filter_steps([2, 1], excerpts, [first, following, unrelated]) == [1, 2]
+
+
+def test_edit_procedure_keeps_opening_edit_and_save_without_cancel_control() -> None:
+    opening, edit = _hit(1, 0.5), _hit(2, 0.7)
+    edit.document_id = opening.document_id
+    opening.content = '7 Cliccando sulla scheda il contenuto espanso è visibile a destra.'
+    edit.content = ('3.2 Modifica Scheda\n\nCliccare sull’icona di modifica.\n\n'
+                    '• Annulla modifiche ripristina il contenuto.\n\n'
+                    'Per confermare cliccare sul pulsante Salva.')
+    excerpts = [(1, opening.content), (2, 'Cliccare sull’icona di modifica.'),
+                (2, '• Annulla modifiche ripristina il contenuto.'),
+                (2, 'Per confermare cliccare sul pulsante Salva.')]
+    assert _procedure_selection('Come correggo una scheda salvata?', [opening, edit], excerpts) == [1, 2, 4]
+    assert _procedure_selection('Come annullo le modifiche della scheda?', [opening, edit], excerpts) is None
+
+
+def test_table_rows_are_separate_controls() -> None:
+    assert _source_sentences('1 Titolo.\n 2 Contenuto.\n 3 Pulsante Apri.') == [
+        '1 Titolo.', '2 Contenuto.', '3 Pulsante Apri.',
+    ]
+
+
+def test_regret_and_cancel_need_saved_state_before_choosing_a_procedure(tmp_path: Path) -> None:
+    from manuali_rag.retrieval import EDIT_CLARIFICATION_TEXT
+
+    # Il chiarimento deve precedere qualunque ricerca o generazione.
+    answer = AnswerService(None, None, settings_for(tmp_path)).answer(
+        'Ho sbagliato a scrivere una nota: come annullo le modifiche?'
+    )
+    assert answer.text == EDIT_CLARIFICATION_TEXT
+    assert not answer.sources

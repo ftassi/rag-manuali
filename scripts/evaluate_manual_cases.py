@@ -77,7 +77,7 @@ def main() -> None:
                 "Non ho trovato informazioni pertinenti nei manuali indicizzati.",
             }
             if case.get("expect_clarification", False):
-                expected_texts = {CLARIFICATION_TEXT}
+                expected_texts = {case.get("clarification_text", CLARIFICATION_TEXT)}
             facts_ok = answer_text in expected_texts
             sources_ok = not source_count
             citations_ok = True
