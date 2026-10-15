@@ -146,3 +146,15 @@ def test_parallel_request_does_not_exclude_a_value_with_a_different_label():
     selected = select_passages(question, passages, scores)
     text = ' '.join(passages[i].text for i in selected)
     assert 'reparti abilitati' in text and 'fornitori configurati' in text
+
+
+def test_complementary_parameters_are_not_competing_contexts():
+    from manuali_rag.structure import confident_context
+
+    passages = passages_from_hits([hit(1,
+        '1. Associazione risorse\n\n'
+        'Nella sezione Destinatari, associare i reparti.\n\n'
+        'Nella sezione Origini, associare i fornitori.\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    assert confident_context(passages, [0.60, 0.59, 0.2], 0)
+    assert not confident_context(passages, [0.60, 0.59, 0.59], 0)

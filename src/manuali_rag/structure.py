@@ -214,6 +214,16 @@ def ambiguous_choice(question: str, passages: list[Passage], scores: list[float]
     )
 
 
+def confident_context(passages: list[Passage], scores: list[float], best: int) -> bool:
+    first = passages[best]
+    runners = [score for index, score in enumerate(scores)
+               if (passages[index].document_id, passages[index].scope, passages[index].chapter)
+               != (first.document_id, first.scope, first.chapter)]
+    return scores[best] >= 0.65 or (
+        scores[best] >= 0.55 and scores[best] - max(runners, default=0) >= 0.06
+    )
+
+
 def rank_scores(question: str, passages: list[Passage], similarities: list[float]) -> list[float]:
     """Il soggetto della sezione pesa più delle citazioni incidentali nel testo."""
     query = roots(focus_question(question))

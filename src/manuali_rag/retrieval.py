@@ -13,6 +13,7 @@ from .llm import LLMClient
 from .store import FTS_STOPWORDS, FTS_TOKEN_RE, SearchHit, Store
 from .structure import (
     ambiguous_choice,
+    confident_context,
     focus_question,
     passages_from_hits,
     rank_scores,
@@ -644,12 +645,9 @@ class AnswerService:
         similarities = [sum(a * b for a, b in zip(query, v, strict=True)) for v in vectors]
         scores = rank_scores(question, passages, similarities)
         best = max(range(len(scores)), key=scores.__getitem__)
-        runners = [score for index, score in enumerate(scores)
-                   if index != best and passages[index].text != passages[best].text]
-        clear = scores[best] >= 0.55 and scores[best] - max(runners, default=0) >= 0.06
         body_terms = roots(passages[best].text)
         topic_terms = roots(passages[best].topic)
-        if (not (scores[best] >= 0.65 or clear) or similarities[best] < 0.35
+        if (not confident_context(passages, scores, best) or similarities[best] < 0.35
                 or not (query_terms & body_terms)
                 or not mandatory and not query_terms & topic_terms):
             return missing if mandatory else None
