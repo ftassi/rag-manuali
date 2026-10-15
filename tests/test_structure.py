@@ -78,3 +78,15 @@ def test_requested_parameters_keep_values_from_both_pages():
     selected = select_passages('Quali stati limite modifica e cancellazione?', passages, scores)
     texts = ' '.join(passages[i].text for i in selected)
     assert 'Valore: A' in texts and 'Valore: B' in texts
+
+
+def test_repeated_opening_steps_belong_to_both_procedures():
+    passages = passages_from_hits([hit(1,
+        '1. Associazione e attivazione\n\nPer associare:\n\n'
+        '1. Selezionare la risorsa.\n\n2. Aprire il menu.\n\n3. Premere Associa.\n\n'
+        'Per attivare:\n\n1. Selezionare la risorsa.\n\n2. Aprire il menu.\n\n3. Premere Attiva.\n\n'
+        '2. Uscita\n\nPremere Chiudi.')])
+    activation = next(p for p in passages if 'Premere Attiva' in p.text)
+    assert 'Selezionare la risorsa' in activation.text
+    assert 'Aprire il menu' in activation.text
+    assert 'Premere Associa' not in activation.text

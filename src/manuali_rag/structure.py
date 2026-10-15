@@ -123,12 +123,12 @@ def _document_passages(doc_hits: list[SearchHit]) -> list[Passage]:
         group_kind = ""
         last_number = 0
 
-    seen = set()
+    seen = {}
     for hit, text in blocks:
         key = (hit.page, text)
-        if key in seen:
+        if key in seen and seen[key] != hit.chunk_id:
             continue
-        seen.add(key)
+        seen[key] = hit.chunk_id
         if text.isdigit() or re.search(r"\.{3,}", text):
             continue
         heading = flat_heading(text)
