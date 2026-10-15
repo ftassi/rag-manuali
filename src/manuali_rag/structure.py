@@ -75,99 +75,104 @@ def passages_from_hits(hits: list[SearchHit]) -> list[Passage]:
     documents: dict[str, list[SearchHit]] = defaultdict(list)
     for hit in hits:
         documents[hit.document_id].append(hit)
+    return [passage for doc_hits in documents.values()
+            for passage in _document_passages(doc_hits)]
+
+
+def _document_passages(doc_hits: list[SearchHit]) -> list[Passage]:
     result = []
-    for doc_hits in documents.values():
-        ordered = sorted(doc_hits, key=lambda hit: (hit.page or 0, hit.chunk_id))
-        blocks = [(hit, " ".join(block.split())) for hit in ordered
-                  for block in hit.content.split("\n\n") if block.strip()]
-        flat = sum(flat_heading(text) is not None for _, text in blocks)
-        nested = sum(bool(re.match(r"^\d+(?:\.\d+)+\s+", text)) for _, text in blocks)
-        if flat < 2 or flat <= nested:
-            continue
-        scope = section = label = ""
-        intro: tuple[SearchHit, str] | None = None
-        group: list[tuple[SearchHit, str]] = []
+    ordered = sorted(doc_hits, key=lambda hit: (hit.page or 0, hit.chunk_id))
+    blocks = [(hit, " ".join(block.split())) for hit in ordered
+              for block in hit.content.split("\n\n") if block.strip()]
+    flat = sum(flat_heading(text) is not None for _, text in blocks)
+    nested = sum(bool(re.match(r"^\d+(?:\.\d+)+\s+", text)) for _, text in blocks)
+    if flat < 2 or flat <= nested:
+        return []
+    scope = section = label = ""
+    intro: tuple[SearchHit, str] | None = None
+    group: list[tuple[SearchHit, str]] = []
+    group_kind = ""
+    group_topic = ""
+    group_path = ""
+    group_scope = ""
+    last_number = 0
+    last_prose = ""
+
+    def path() -> str:
+        return " / ".join(part for part in (scope, section, label) if part)
+
+    def emit(kind: str, parts: list[tuple[SearchHit, str]], topic: str = "") -> None:
+        if parts:
+            result.append(Passage(path(), topic or label or section, scope, kind, list(parts)))
+
+    def flush() -> None:
+        nonlocal group, group_kind, last_number
+        if group:
+            parts = ([intro] if intro else []) + group
+            result.append(Passage(group_path, group_topic, group_scope, group_kind, parts))
+            if group_kind == "fields":
+                for hit, text in group:
+                    match = re.match(r"^[•◼➢❖▪]\s*([^:]{2,65}):\s*(.+)", text)
+                    if match:
+                        parts = ([(intro[0], intro[1])] if intro and match[1].casefold() == "valore" else [])
+                        result.append(Passage(
+                            group_path + " / " + match[1], match[1], group_scope,
+                            "field", parts + [(hit, text)],
+                        ))
+        group = []
         group_kind = ""
-        group_topic = ""
-        group_path = ""
-        group_scope = ""
         last_number = 0
-        last_prose = ""
 
-        def path() -> str:
-            return " / ".join(part for part in (scope, section, label) if part)
-
-        def emit(kind: str, parts: list[tuple[SearchHit, str]], topic: str = "") -> None:
-            if parts:
-                result.append(Passage(path(), topic or label or section, scope, kind, list(parts)))
-
-        def flush() -> None:
-            nonlocal group, group_kind, last_number
-            if group:
-                parts = ([intro] if intro else []) + group
-                result.append(Passage(group_path, group_topic, group_scope, group_kind, parts))
-                if group_kind == "fields":
-                    for hit, text in group:
-                        match = re.match(r"^[•◼➢❖▪]\s*([^:]{2,65}):\s*(.+)", text)
-                        if match:
-                            parts = ([(intro[0], intro[1])] if intro and match[1].casefold() == "valore" else [])
-                            result.append(Passage(
-                                group_path + " / " + match[1], match[1], group_scope,
-                                "field", parts + [(hit, text)],
-                            ))
-            group = []
-            group_kind = ""
-            last_number = 0
-
-        seen = set()
-        for hit, text in blocks:
-            key = (hit.page, text)
-            if key in seen:
-                continue
-            seen.add(key)
-            if text.isdigit() or re.search(r"\.{3,}", text):
-                continue
-            heading = flat_heading(text)
-            root = re.fullmatch(r"[A-ZÀ-Ý0-9][A-ZÀ-Ý0-9 /_-]{2,70}:", text)
-            if heading or root or _plain_heading(text):
+    seen = set()
+    for hit, text in blocks:
+        key = (hit.page, text)
+        if key in seen:
+            continue
+        seen.add(key)
+        if text.isdigit() or re.search(r"\.{3,}", text):
+            continue
+        heading = flat_heading(text)
+        root = re.fullmatch(r"[A-ZÀ-Ý0-9][A-ZÀ-Ý0-9 /_-]{2,70}:", text)
+        if heading or root or _plain_heading(text):
+            flush()
+            intro = None
+            if root:
+                scope, section, label = text.rstrip(":"), "", ""
+            elif heading:
+                section, label = heading, ""
+            else:
+                label = text
+                intro = (hit, text)
+            last_prose = ""
+            continue
+        number = NUMBER.match(text)
+        kind = "fields" if BULLET.match(text) else (
+            "steps" if number or VERB.match(text) and not text.endswith(":") else ""
+        )
+        if kind:
+            value = int(number[1]) if number else 0
+            if group and (kind != group_kind or number and value <= last_number):
                 flush()
                 intro = None
-                if root:
-                    scope, section, label = text.rstrip(":"), "", ""
-                elif heading:
-                    section, label = heading, ""
-                else:
-                    label = text
-                    intro = (hit, text)
-                last_prose = ""
-                continue
-            number = NUMBER.match(text)
-            kind = "fields" if BULLET.match(text) else (
-                "steps" if number or VERB.match(text) and not text.endswith(":") else ""
-            )
-            if kind:
-                value = int(number[1]) if number else 0
-                if group and (kind != group_kind or number and value <= last_number):
-                    flush()
-                    intro = None
-                if not group:
-                    group_kind = kind
-                    group_path = path() + (" / " + last_prose[:180] if last_prose else "")
-                    group_topic, group_scope = label or section, scope
-                group.append((hit, text))
-                last_number = value
-                continue
-            flush()
-            if not text.endswith(":"):
-                emit("prose", [(hit, text)])
-                last_prose = text
-            intro = (hit, text) if text.endswith(":") or re.match(r"Una volta", text) else None
+            if not group:
+                group_kind = kind
+                group_path = path() + (" / " + last_prose[:180] if last_prose else "")
+                group_topic, group_scope = label or section, scope
+            group.append((hit, text))
+            last_number = value
+            continue
         flush()
+        if not text.endswith(":"):
+            emit("prose", [(hit, text)])
+            last_prose = text
+        intro = (hit, text) if text.endswith(":") or re.match(r"Una volta", text) else None
+    flush()
+
     return result
 
 
 def scope_tags(passages: list[Passage]) -> set[str]:
-    scopes = set(p.scope for p in passages if p.scope)
+    scopes = {p.scope for p in passages if p.scope}
     counts = Counter(token.casefold() for scope in scopes for token in set(FTS_TOKEN_RE.findall(scope)))
     return {token for token, count in counts.items() if count == 1
             and token not in {"manuale", "utente", "guida", "configurazione"}}
