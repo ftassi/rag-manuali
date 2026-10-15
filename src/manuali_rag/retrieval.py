@@ -730,7 +730,7 @@ class AnswerService:
                         sources.append(hit)
                         source = len(sources)
                     mapping[old] = source
-                paragraphs.append(re.sub(r"\[S(\d+)\]", lambda m: f"[S{mapping[int(m[1])]}]", reply.text))
+                paragraphs.append(re.sub(r"\[S(\d+)\]", lambda m, source_map=mapping: f"[S{source_map[int(m[1])]}]", reply.text))
             return Answer("\n\n".join(paragraphs), sources)
         search_question = question
         semantic = self.settings.embedding_provider == "openai"
