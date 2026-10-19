@@ -185,3 +185,31 @@ def test_initial_time_field_does_not_support_initial_login_credentials():
         'GESTIONE ALFA:\n\n1. Autenticazione\n\nInserire nome utente e password.\n\n'
         '2. Uscita\n\nPremere Chiudi.')])
     assert authentication_supported('Come faccio il login?', relevant)
+
+
+def test_creation_includes_fields_and_save_but_navigation_does_not():
+    passages = passages_from_hits([hit(1,
+        'SISTEMA ALFA:\n\n1. Creazione risorsa\n\n'
+        'Aprire Risorse.\n\nPremere Nuova.\n\n'
+        'Il codice viene generato dopo il salvataggio.\n\n'
+        'Compilare:\n\n• Nome: inserire un nome.\n\n'
+        '• Stato: mantenere Inattivo.\n\n'
+        'Una volta completata la compilazione, cliccare su Salva.\n\n'
+        '2. Eliminazione\n\nPremere Elimina.')])
+    scores = [1.0] + [0.1] * (len(passages) - 1)
+    selected = select_passages('Come creo una risorsa?', passages, scores)
+    text = '\n'.join(passages[i].text for i in selected)
+    assert 'Nome:' in text and 'Inattivo' in text and 'Salva' in text
+    assert 'Elimina' not in text
+    assert select_passages('Da dove creo una risorsa?', passages, scores) == [0]
+
+
+def test_creation_does_not_take_fields_from_another_scope():
+    passages = passages_from_hits([
+        hit(1, 'SISTEMA ALFA:\n\n1. Creazione\n\nPremere Nuovo.\n\n'
+            '2. Altro\n\nPremere Apri.'),
+        hit(2, 'SISTEMA BETA:\n\n1. Creazione\n\nCompilare:\n\n'
+            '• Nome: inserire il nome.\n\n2. Altro\n\nPremere Apri.'),
+    ])
+    selected = select_passages('Come creo?', passages, [1.0] + [0.1] * (len(passages) - 1))
+    assert all(passages[i].scope == 'SISTEMA ALFA' for i in selected)

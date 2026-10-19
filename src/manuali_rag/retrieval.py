@@ -103,6 +103,36 @@ class Answer:
     sources: list[SearchHit]
 
 
+def _conversational_steps(text: str) -> str:
+    """Raccordi grammaticali soltanto: fatti, condizioni e citazioni restano intatti."""
+    verbs = {
+        "accedere": "accedi", "selezionare": "seleziona", "cliccare": "clicca",
+        "inserire": "inserisci", "compilare": "compila", "premere": "premi",
+        "aprire": "apri", "indicare": "indica", "impostare": "imposta",
+        "mantenere": "mantieni", "lasciare": "lascia", "fare": "fai",
+    }
+    pattern = r"(^|[.!?]\s+|:\s+|\be\s+)(" + "|".join(verbs) + r")\b"
+
+    def conjugate(match: re.Match) -> str:
+        word = verbs[match[2].casefold()]
+        if match[2][0].isupper():
+            word = word.capitalize()
+        return match[1] + word
+
+    return re.sub(pattern, conjugate, text, flags=re.IGNORECASE | re.MULTILINE)
+
+
+def _connected_reply(text: str, position: int) -> str:
+    text = _conversational_steps(text)
+    text = re.sub(r"(?<!:)\n(?![•◼➢❖▪])", " ", text)
+    if position and text.startswith("In "):
+        return "Passando a " + text[3:]
+    prefix = "Per iniziare, " if position == 0 else "Per l’operazione successiva, "
+    if text and text[0].isupper() and not text.split()[0].isupper():
+        text = text[0].lower() + text[1:]
+    return prefix + text
+
+
 def _source_sentences(excerpt: str) -> list[str]:
     sentences = []
     # Mantiene separati i controlli descritti su righe numerate di una tabella PDF.
@@ -664,7 +694,7 @@ class AnswerService:
         sources: list[SearchHit] = []
         headings = list(dict.fromkeys(" / ".join(passages[index].path.split(" / ")[:2])
                                       for index in selected))
-        lines = [" — ".join(headings)]
+        lines = []
         seen = set()
         for hit, text in parts:
             key = (hit.chunk_id, text)
@@ -677,7 +707,14 @@ class AnswerService:
                 sources.append(replace(hit, semantic_score=scores[best], score=scores[best]))
                 source = len(sources)
             lines.append(f"{text} [S{source}]")
-        return Answer("\n".join(lines), sources)
+        body = _conversational_steps("\n".join(lines))
+        scopes = list(dict.fromkeys(passages[index].scope for index in selected
+                                    if passages[index].scope))
+        if scopes:
+            body = "In " + " / ".join(scopes) + ", " + body[0].lower() + body[1:]
+        elif headings:
+            body = " — ".join(headings) + ":\n" + body
+        return Answer(body, sources)
 
     def _search_question(self, question: str) -> str:
         normalized = re.sub(
@@ -725,7 +762,7 @@ class AnswerService:
                 return incomplete
             sources = []
             paragraphs = []
-            for reply in replies:
+            for position, reply in enumerate(replies):
                 mapping = {}
                 for old, hit in enumerate(reply.sources, start=1):
                     source = next((i for i, item in enumerate(sources, start=1)
@@ -734,7 +771,8 @@ class AnswerService:
                         sources.append(hit)
                         source = len(sources)
                     mapping[old] = source
-                paragraphs.append(re.sub(r"\[S(\d+)\]", lambda m, source_map=mapping: f"[S{source_map[int(m[1])]}]", reply.text))
+                paragraphs.append(re.sub(r"\[S(\d+)\]", lambda m, source_map=mapping: f"[S{source_map[int(m[1])]}]",
+                                         _connected_reply(reply.text, position)))
             return Answer("\n\n".join(paragraphs), sources)
         search_question = question
         semantic = self.settings.embedding_provider == "openai"

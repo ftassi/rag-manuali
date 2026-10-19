@@ -711,6 +711,27 @@ def test_two_explicit_operations_keep_both_documents_and_renumber_sources(tmp_pa
 
     service = AnswerService(StaticRetriever(), SelectingLLM(), settings_for(tmp_path))
     answer = service.answer('Come apro il motore e poi controllo il filtro?')
-    assert 'Premere Apri' in answer.text and 'Premere Controlla' in answer.text
+    assert 'premi Apri' in answer.text and 'premi Controlla' in answer.text
+    assert answer.text.startswith('Per iniziare,')
+    assert 'Per l’operazione successiva,' in answer.text
     assert '[S1]' in answer.text and '[S2]' in answer.text
     assert answer.sources == [first, second]
+
+
+def test_connected_reply_preserves_conditions_codes_and_citations():
+    from manuali_rag.retrieval import _connected_reply
+
+    text = 'In SISTEMA B, seleziona il reparto. [S1]\nNon premere "Attivo". [S2]'
+    result = _connected_reply(text, 1)
+    assert result.startswith('Passando a SISTEMA B, seleziona')
+    assert 'Non premere "Attivo". [S2]' in result
+    assert '[S1]' in result
+
+
+def test_conversational_steps_keep_negations_and_conditional_verbs():
+    from manuali_rag.retrieval import _conversational_steps
+
+    text = 'Inserire codice AB-42 e cliccare Salva. Non fare modifiche. Prima di fare accesso.'
+    assert _conversational_steps(text) == (
+        'Inserisci codice AB-42 e clicca Salva. Non fare modifiche. Prima di fare accesso.'
+    )

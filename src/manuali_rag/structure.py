@@ -306,6 +306,23 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
                     and roots(p.topic) & query and scores[index] >= scores[best] - 0.30):
                 selected.append(index)
                 break
+    # Le richieste di creazione includono compilazione e conferma;
+    # una domanda di sola navigazione resta limitata al punto di ingresso.
+    if (first.kind == "steps" and "creaz" in query
+            and not re.search(r"\b(?:dove|pulsante|bottone)\b", question, re.IGNORECASE)):
+        for index in range(best + 1, len(passages)):
+            p = passages[index]
+            if (p.document_id != first.document_id or p.scope != first.scope
+                    or p.chapter != first.chapter):
+                break
+            if p.kind == "fields":
+                selected.append(index)
+            elif p.kind in {"steps", "prose"} and re.search(
+                r"^(?:Una volta|Dopo aver)\b.*\b(?:salva|conferma|salvare|confermare)\b",
+                p.text, re.IGNORECASE,
+            ):
+                selected.append(index)
+                break
     # Una domanda su più parametri deve coprire i diversi nomi, non solo uno.
     if re.search(r"\be\b|\bquali\b", question, re.IGNORECASE):
         query = roots(question)
