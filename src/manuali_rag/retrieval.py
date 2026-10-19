@@ -726,7 +726,11 @@ class AnswerService:
         scopes = list(dict.fromkeys(passages[index].scope for index in selected
                                     if passages[index].scope))
         if scopes:
-            body = "In " + " / ".join(scopes) + ", " + body[0].lower() + body[1:]
+            context = " / ".join(scopes)
+            if passages[selected[0]].kind != "steps":
+                chapters = list(dict.fromkeys(passages[index].chapter for index in selected))
+                context += " (" + " / ".join(chapters) + ")"
+            body = "In " + context + ", " + body[0].lower() + body[1:]
         elif headings:
             body = " — ".join(headings) + ":\n" + body
         return Answer(body, sources)
