@@ -1,10 +1,58 @@
-# Punto di ripresa — 15 ottobre 2026
+# Punto di ripresa — 19 ottobre 2026
 
 ## Obiettivo finale
 
 Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte nel
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
+
+## Riscontro offline e completezza — 19 ottobre 2026
+
+L'utente ha provato sul Raspberry senza Wi-Fi tre domande: creazione agenda,
+login e richiesta composta. Scelta dei documenti e immagini corrette; login
+approvato anche nella formulazione. Due aspetti da migliorare: creazione agenda
+ferma al pulsante Nuova e semplice concatenazione delle risposte nella domanda
+composta. Il riscontro pratico non equivale ad approvazione finale dello stile.
+
+Codice `f45bcde`: per richieste di creazione recupera anche il gruppo dei campi e
+la conferma finale nello stesso documento, contesto e capitolo. Domande che
+chiedono soltanto dove trovare un comando mantengono la risposta di navigazione.
+Le istruzioni dirette sono rese in seconda persona e le operazioni composte
+ricevono raccordi; fonti, condizioni e negazioni restano verificabili. La risposta
+singola sul login mantiene il percorso già approvato. Non si presume che il login
+C4C dia accesso a HERO: i due contesti sono distinti nel testo.
+
+La procedura completa dell'agenda usa pagine 1 e 2. Conservato il file storico
+`agende-routing-cases-2026-10-15.json`; derivato privato
+`agende-complete-cases-2026-10-19.json` con due soli casi aggiornati, `route-new`
+e `route-mixed`: ammessa pagina 2 e richiesti anche Descrizione, Slot, Inattivo e
+Salva. Nessuna modifica ai criteri degli altri 34 casi o ai 51 casi QARA.
+
+Lint e **93 test** superati sul Raspberry sul codice `f45bcde`.
+Regressione via API sullo stesso commit: **36/36 AGENDE** e **51/51 QARA**,
+con controllo di testo, pagine, documenti, citazioni e disponibilità delle immagini.
+Report privati `agende-complete-report-2026-10-19.json` e
+`qara-complete-report-2026-10-19.json`, in `data/evaluations/`.
+Prova runtime nella slice con accesso esterno bloccato dal kernel: domanda composta
+con entrambi i manuali, interfaccia e pagina citata disponibili; importazione e
+interrogazione HTTP sintetica **6/6** in indice temporaneo. Criterio privato
+`offline-complete-cases-2026-10-19.json`. Nessuna nuova prova fisica senza Wi-Fi
+dopo la modifica: resta da raccogliere il giudizio personale sul testo.
+`make health` e `make ollama-check` superati; indice invariato, 3 documenti e
+236 chunk. Nessun nuovo modello o servizio esterno.
+
+Durante i controlli corretti due residui: coniugazione troppo estesa nelle frasi
+modali/negative e perdita del contesto Provider eliminando l'intestazione. Il
+commit finale limita le trasformazioni grammaticali alle istruzioni dirette e
+mantiene il capitolo nelle risposte sui campi. I report finali riguardano la
+versione corretta; la prima partenza del collaudo prima della disponibilità del
+servizio e i giri intermedi interrotti non sono conteggiati come prove riuscite.
+
+Prossimo passo: riprovare personalmente offline la creazione agenda e la domanda
+composta, valutando completezza e naturalezza. La procedura completa è più lunga
+perché include tutti i campi: se serve una versione breve, valutare una sintesi
+con dettagli consultabili, senza nascondere i passaggi necessari. Altra opzione:
+ampliare le formulazioni spontanee. Non aggiungere un selettore dei manuali.
 
 ## Selezione automatica di manuale e sezione — codice `bf9817b`
 

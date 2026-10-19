@@ -705,3 +705,42 @@ La prova nella slice locale ha verificato il blocco della rete esterna e la scel
 automatica di AGENDE per una domanda senza nome del manuale o del software, con
 istruzioni e immagine citata disponibili. Non è un nuovo test fisico con Wi-Fi
 disattivato: il riscontro personale resta da raccogliere.
+
+
+## 19. Procedure complete e domande con più operazioni
+
+Una domanda come «Come creo una nuova agenda?» deve coprire anche compilazione e
+salvataggio, non fermarsi al pulsante Nuova. Le immagini possono quindi includere
+la pagina successiva. Se vuoi soltanto trovare il punto d'ingresso, chiedi
+«Da dove creo una nuova agenda?».
+
+Puoi collegare operazioni esplicite con «e poi». Il RAG mantiene i contesti dei
+manuali distinti e raccorda le istruzioni, conservando le citazioni. Un login
+illustrato per un applicativo non dimostra l'accesso a un altro applicativo.
+Se una delle operazioni non è documentata, non viene inventata la parte mancante.
+Il riscontro personale del 19 ottobre ha confermato la scelta automatica offline;
+la nuova completezza e la formulazione devono essere riprovate nell'interfaccia.
+
+Per ripetere il collaudo aggiornato delle procedure complete (file privato sul
+Raspberry, derivato dai 36 casi precedenti):
+
+```bash
+cd /home/michele/progetti/rag-manuali
+PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
+  --cases data/evaluations/agende-complete-cases-2026-10-19.json \
+  --output data/evaluations/agende-complete-next.json \
+  --api-url http://127.0.0.1:8000
+```
+
+Ripetere anche i 51 casi QARA nell'indice misto. I criteri storici restano
+conservati: due domande ora richiedono campi e Salva, con pagina 2 ammessa.
+
+
+Sul codice `f45bcde`: lint e **93 test**, **36/36 casi AGENDE** aggiornati e
+**51/51 QARA** superati sul Raspberry, con fonti e immagini controllate.
+La domanda composta è stata verificata anche nella slice con rete esterna negata;
+interfaccia e importazione HTTP sintetica **6/6** funzionanti. Nessuna nuova
+prova fisica senza Wi-Fi dopo questa modifica. Report locali in
+`agende-complete-report-2026-10-19.json` e `qara-complete-report-2026-10-19.json`.
+La formulazione usa raccordi e trasformazioni grammaticali controllate delle
+istruzioni originali; il giudizio sulla naturalezza resta parte della prova personale.
