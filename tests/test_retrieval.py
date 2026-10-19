@@ -723,7 +723,7 @@ def test_connected_reply_preserves_conditions_codes_and_citations():
 
     text = 'In SISTEMA B, seleziona il reparto. [S1]\nNon premere "Attivo". [S2]'
     result = _connected_reply(text, 1)
-    assert result.startswith('Passando a SISTEMA B, seleziona')
+    assert result.startswith('Per l’altra operazione, in SISTEMA B, seleziona')
     assert 'Non premere "Attivo". [S2]' in result
     assert '[S1]' in result
 

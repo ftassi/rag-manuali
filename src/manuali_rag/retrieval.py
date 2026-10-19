@@ -126,7 +126,7 @@ def _connected_reply(text: str, position: int) -> str:
     text = _conversational_steps(text)
     text = re.sub(r"(?<!:)\n(?![•◼➢❖▪])", " ", text)
     if position and text.startswith("In "):
-        return "Passando a " + text[3:]
+        return "Per l’altra operazione, in " + text[3:]
     prefix = "Per iniziare, " if position == 0 else "Per l’operazione successiva, "
     if text and text[0].isupper() and not text.split()[0].isupper():
         text = text[0].lower() + text[1:]
