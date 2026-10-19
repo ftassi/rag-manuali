@@ -111,7 +111,7 @@ def _conversational_steps(text: str) -> str:
         "aprire": "apri", "indicare": "indica", "impostare": "imposta",
         "mantenere": "mantieni", "lasciare": "lascia", "fare": "fai",
     }
-    pattern = r"(^|[.!?]\s+|:\s+|\be\s+)(" + "|".join(verbs) + r")\b"
+    pattern = r"(^|[.!?]\s+|:\s+)(" + "|".join(verbs) + r")\b"
 
     def conjugate(match: re.Match) -> str:
         word = verbs[match[2].casefold()]
@@ -121,17 +121,19 @@ def _conversational_steps(text: str) -> str:
 
     lines = []
     for line in text.split("\n"):
-        converted = re.sub(pattern, conjugate, line, flags=re.IGNORECASE)
-        # Coordina soltanto istruzioni già trasformate, mai frasi modali come
-        # "è necessario aprire e inserire" o "non aprire e modificare".
-        if converted != line:
-            converted = re.sub(r"(\be\s+)(" + "|".join(verbs) + r")\b",
-                               conjugate, converted, flags=re.IGNORECASE)
-        converted = re.sub(
-            r"(^Una volta[^.!?]*,\s+)(" + "|".join(verbs) + r")\b",
-            conjugate, converted, flags=re.IGNORECASE,
-        )
-        lines.append(converted)
+        sentences = []
+        for sentence in re.split(r"(?<=[.!?])\s+", line):
+            converted = re.sub(pattern, conjugate, sentence, flags=re.IGNORECASE)
+            # Coordina solo istruzioni dirette, mai frasi modali o negative.
+            if converted != sentence:
+                converted = re.sub(r"(\be\s+)(" + "|".join(verbs) + r")\b",
+                                   conjugate, converted, flags=re.IGNORECASE)
+            converted = re.sub(
+                r"(^Una volta[^.!?]*,\s+)(" + "|".join(verbs) + r")\b",
+                conjugate, converted, flags=re.IGNORECASE,
+            )
+            sentences.append(converted)
+        lines.append(" ".join(sentences))
     return "\n".join(lines)
 
 

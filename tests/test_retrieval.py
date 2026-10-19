@@ -742,3 +742,11 @@ def test_conversational_steps_do_not_conjugate_modal_or_negative_instructions():
 
     text = 'È necessario aprire e inserire i dati. Non aprire e modificare il codice.'
     assert _conversational_steps(text) == text
+
+
+def test_direct_instruction_does_not_change_the_following_negative_sentence():
+    from manuali_rag.retrieval import _conversational_steps
+
+    assert _conversational_steps('Aprire il menu. Non aprire e modificare il codice.') == (
+        'Apri il menu. Non aprire e modificare il codice.'
+    )
