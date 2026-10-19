@@ -119,7 +119,20 @@ def _conversational_steps(text: str) -> str:
             word = word.capitalize()
         return match[1] + word
 
-    return re.sub(pattern, conjugate, text, flags=re.IGNORECASE | re.MULTILINE)
+    lines = []
+    for line in text.split("\n"):
+        converted = re.sub(pattern, conjugate, line, flags=re.IGNORECASE)
+        # Coordina soltanto istruzioni già trasformate, mai frasi modali come
+        # "è necessario aprire e inserire" o "non aprire e modificare".
+        if converted != line:
+            converted = re.sub(r"(\be\s+)(" + "|".join(verbs) + r")\b",
+                               conjugate, converted, flags=re.IGNORECASE)
+        converted = re.sub(
+            r"(^Una volta[^.!?]*,\s+)(" + "|".join(verbs) + r")\b",
+            conjugate, converted, flags=re.IGNORECASE,
+        )
+        lines.append(converted)
+    return "\n".join(lines)
 
 
 def _connected_reply(text: str, position: int) -> str:

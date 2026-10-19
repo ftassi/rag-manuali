@@ -735,3 +735,10 @@ def test_conversational_steps_keep_negations_and_conditional_verbs():
     assert _conversational_steps(text) == (
         'Inserisci codice AB-42 e clicca Salva. Non fare modifiche. Prima di fare accesso.'
     )
+
+
+def test_conversational_steps_do_not_conjugate_modal_or_negative_instructions():
+    from manuali_rag.retrieval import _conversational_steps
+
+    text = 'È necessario aprire e inserire i dati. Non aprire e modificare il codice.'
+    assert _conversational_steps(text) == text
