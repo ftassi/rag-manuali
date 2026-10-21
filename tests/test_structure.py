@@ -257,3 +257,13 @@ def test_identifier_origin_follows_an_explicit_scope_reference_only():
     selected = select_passages('Il codice lo invento o devo recuperarlo?', passages, scores)
     assert any('automaticamente' in passages[i].text for i in selected)
     assert not any('Esci' in passages[i].text for i in selected)
+
+
+def test_requested_action_can_be_a_noun_in_a_direct_instruction():
+    passages = passages_from_hits([hit(1,
+        '1. Modifiche successive\n\nPer modificare:\n\n'
+        '1. Impostare Inattivo.\n\n2. Effettuare le modifiche.\n\n'
+        '3. Riattivare la risorsa.\n\n2. Consultazione\n\nAprire il dettaglio.')])
+    scores = rank_scores('Come posso modificarla?', passages, [0.5] * len(passages))
+    best = passages[max(range(len(scores)), key=scores.__getitem__)]
+    assert 'Effettuare le modifiche' in best.text and scores[0] > 0.7

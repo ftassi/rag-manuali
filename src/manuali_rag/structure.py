@@ -272,7 +272,9 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
             score += 0.50 if p.kind == "field" else 0.10
         # Un'azione richiesta pesa più di un'azione già compiuta nell'introduzione.
         infinitives = re.findall(r"\b\w+(?:are|ere|ire)\b", p.text, re.IGNORECASE)
-        if requested_action and requested_action & roots(" ".join(infinitives)):
+        instructions = [line for line in p.text.splitlines()
+                        if VERB.match(re.sub(r"^\d+\.\s*", "", line))]
+        if requested_action and requested_action & roots(" ".join(infinitives + instructions)):
             score += 0.22
         elif requested_action and p.kind == "steps":
             score -= 0.10
