@@ -750,3 +750,28 @@ def test_direct_instruction_does_not_change_the_following_negative_sentence():
     assert _conversational_steps('Aprire il menu. Non aprire e modificare il codice.') == (
         'Apri il menu. Non aprire e modificare il codice.'
     )
+
+
+def test_procedure_rendering_removes_table_markers_and_dangling_list_introductions():
+    from manuali_rag.retrieval import _render_excerpts
+
+    excerpts = [(1, '7 Cliccando sulla risorsa si apre il dettaglio, come precedentemente descritto, così.'),
+                (2, 'Premere Modifica per aprire il dettaglio, dove sono visibili:'),
+                (2, 'Non modificare il codice. Confermare con Salva.')]
+    text = _render_excerpts([1, 2, 3], excerpts, procedural=True)
+    assert text == ('Cliccando sulla risorsa si apre il dettaglio. [S1]\n'
+                    'Premere Modifica per aprire il dettaglio. [S2]\n'
+                    'Non modificare il codice. Confermare con Salva. [S2]')
+
+
+def test_edit_procedure_precedes_an_unrelated_numbered_list():
+    from manuali_rag.retrieval import _procedure_selection
+
+    unrelated = _hit(1, 0.9)
+    unrelated.content = '1.1 Elimina nota\n\n1. Premere Elimina.\n\n2. Confermare.'
+    edit = _hit(2, 0.8)
+    edit.content = '1.2 Modifica nota\n\nPremere Modifica.\n\nPremere Salva.'
+    excerpts = [(1, '1. Premere Elimina.'), (1, '2. Confermare.'),
+                (2, 'Premere Modifica.'), (2, 'Premere Salva.')]
+    selected = _procedure_selection('Come modifico una nota?', [unrelated, edit], excerpts)
+    assert selected == [3, 4]

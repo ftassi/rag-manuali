@@ -364,12 +364,20 @@ def _semantic_selection(
     return selected
 
 
-def _render_excerpts(selected: list[int], excerpts: list[tuple[int, str]]) -> str:
+def _render_excerpts(
+    selected: list[int], excerpts: list[tuple[int, str]], *, procedural: bool = False,
+) -> str:
     if not selected:
         return "Le fonti fornite non contengono questa informazione."
     lines = []
     for index in selected:
         source, value = excerpts[index - 1]
+        if procedural:
+            # Rimuove numeri di riga di tabella e rinvii a elenchi non selezionati;
+            # non modifica azioni, condizioni o il contenuto delle istruzioni.
+            value = re.sub(r"^\d+\s+(?=[A-ZÀ-Ý])", "", value)
+            value = re.sub(r",\s*come precedentemente descritto(?:,\s*così)?\.$", ".", value)
+            value = re.sub(r",\s*dove sono visibili:$", ".", value)
         line = f"{value} [S{source}]"
         if line not in lines:
             lines.append(line)
@@ -1061,7 +1069,7 @@ class AnswerService:
                     hits[excerpts[index - 1][0] - 1].page or 0, index,
                 ))
             selected = _complete_filter_steps(selected, excerpts, hits)
-            text = _render_excerpts(selected, excerpts)
+            text = _render_excerpts(selected, excerpts, procedural=procedure_selected)
             if not selected:
                 hits = []
         cited = {int(index) for index in re.findall(r"\[S(\d+)\]", text)}
