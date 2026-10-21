@@ -744,3 +744,14 @@ prova fisica senza Wi-Fi dopo questa modifica. Report locali in
 `agende-complete-report-2026-10-19.json` e `qara-complete-report-2026-10-19.json`.
 La formulazione usa raccordi e trasformazioni grammaticali controllate delle
 istruzioni originali; il giudizio sulla naturalezza resta parte della prova personale.
+
+
+### Conferma della prova personale offline — 21 ottobre 2026
+
+L'utente ha ripetuto senza Wi-Fi la creazione di una nuova agenda e la domanda
+composta di login più creazione agenda: entrambe approvate per testo e immagini.
+La prima è risultata completa; la seconda è stata giudicata ottima anche nella
+formulazione. Questo riscontro completa la verifica personale sopra indicata
+come ancora da raccogliere, sul codice applicativo `f45bcde`.
+Il login singolo era già stato approvato. Per estendere il collaudo, provare nuove
+domande su entrambi i manuali e verificare anche richieste ambigue o non documentate.

@@ -1,10 +1,32 @@
-# Punto di ripresa — 19 ottobre 2026
+# Punto di ripresa — 21 ottobre 2026
 
 ## Obiettivo finale
 
 Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte nel
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
+
+## Prova pratica offline approvata — 21 ottobre 2026
+
+Sul codice applicativo `f45bcde`, salvato con documentazione in `2c83632`,
+l'utente ha ripetuto senza Wi-Fi entrambe le domande dopo la correzione:
+
+- Creazione di una nuova agenda: risposta completa e immagini corrette.
+- Login seguito dalla creazione di un'agenda: risposta giudicata ottima,
+  migliorata nella formulazione, con immagini corrette di entrambi i contesti.
+
+Questa conferma completa la verifica personale rimasta aperta il 19 ottobre.
+Il login singolo era già approvato. Il Wi-Fi è stato riattivato al termine;
+connessione SSH ripristinata, repository Raspberry sul commit previsto e senza
+modifiche, `make health` superato: 3 documenti e 236 chunk. Nessuna modifica al
+codice e nessuna nuova regressione automatica necessaria per questo riscontro.
+I risultati precedenti (93 test e 87 casi via API) restano riferiti a `f45bcde`.
+
+Prossimo passo consigliato: ampliare il collaudo con nuove domande spontanee su
+entrambi i manuali, incluse ambiguità e informazioni assenti. Alternative:
+collaudare un terzo manuale oppure migliorare la gestione dei titoli visibili
+senza dipendere dal nome del file. Non occorre accorciare le due risposte approvate
+senza una nuova richiesta dell'utente. Scelta del prossimo intervento da concordare.
 
 ## Riscontro offline e completezza — 19 ottobre 2026
 
@@ -48,8 +70,9 @@ mantiene il capitolo nelle risposte sui campi. I report finali riguardano la
 versione corretta; la prima partenza del collaudo prima della disponibilità del
 servizio e i giri intermedi interrotti non sono conteggiati come prove riuscite.
 
-Prossimo passo: riprovare personalmente offline la creazione agenda e la domanda
-composta, valutando completezza e naturalezza. La procedura completa è più lunga
+Passo previsto al 19 ottobre, completato e approvato il 21 ottobre: riprovare
+personalmente offline la creazione agenda e la domanda composta, valutando
+completezza e naturalezza. La procedura completa è più lunga
 perché include tutti i campi: se serve una versione breve, valutare una sintesi
 con dettagli consultabili, senza nascondere i passaggi necessari. Altra opzione:
 ampliare le formulazioni spontanee. Non aggiungere un selettore dei manuali.
