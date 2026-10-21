@@ -213,3 +213,47 @@ def test_creation_does_not_take_fields_from_another_scope():
     ])
     selected = select_passages('Come creo?', passages, [1.0] + [0.1] * (len(passages) - 1))
     assert all(passages[i].scope == 'SISTEMA ALFA' for i in selected)
+
+
+def test_alternative_values_select_the_field_not_later_activation():
+    passages = passages_from_hits([hit(1,
+        'SISTEMA ALFA:\n\n1. Configurazione risorsa\n\n'
+        'Compilare:\n\n• Stato: mantenere Inattivo durante la configurazione, '
+        'in stato Attivo non sono consentite modifiche.\n\n'
+        '2. Attivazione risorsa\n\nSelezionare Attiva.')])
+    scores = rank_scores('Ho creato una risorsa: la lascio attiva o inattiva?',
+                         passages, [0.5] * len(passages))
+    best = passages[max(range(len(scores)), key=scores.__getitem__)]
+    assert best.kind == 'field' and 'Inattivo' in best.text
+
+
+def test_saving_outranks_prior_insertion_and_keeps_return_step():
+    passages = passages_from_hits([hit(1,
+        '1. Inserimento dati\n\nDopo il salvataggio:\n\n'
+        '1. Aprire la risorsa.\n\n2. Inserire i dati.\n\n'
+        'Al termine, tornare alla schermata iniziale.\n\n'
+        'Importante: cliccare su Aggiorna per salvare i dati.\n\n'
+        '2. Uscita\n\nPremere Esci.')])
+    question = 'Ho inserito i dati: come salvo quello che ho inserito?'
+    scores = rank_scores(question, passages, [0.5] * len(passages))
+    selected = select_passages(question, passages, scores)
+    text = '\n'.join(passages[i].text for i in selected)
+    assert 'schermata iniziale' in text and 'Aggiorna' in text
+    assert 'Aprire la risorsa' not in text
+
+
+def test_identifier_origin_follows_an_explicit_scope_reference_only():
+    passages = passages_from_hits([
+        hit(1, 'SISTEMA ALFA:\n\n1. Creazione risorsa\n\n'
+            'Il codice viene generato automaticamente dopo il salvataggio.\n\n'
+            '2. Uscita\n\nPremere Esci.'),
+        hit(2, 'SISTEMA BETA:\n\n1. Creazione collegamento\n\n'
+            'Compilare:\n\n• Codice: deve coincidere con il codice della risorsa su ALFA.\n\n'
+            '2. Altro\n\nPremere Apri.'),
+    ])
+    best = next(i for i,p in enumerate(passages) if p.kind == 'field')
+    scores = [0.1] * len(passages)
+    scores[best] = 1.0
+    selected = select_passages('Il codice lo invento o devo recuperarlo?', passages, scores)
+    assert any('automaticamente' in passages[i].text for i in selected)
+    assert not any('Esci' in passages[i].text for i in selected)

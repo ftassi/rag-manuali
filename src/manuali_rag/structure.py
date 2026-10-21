@@ -39,6 +39,8 @@ def roots(text: str) -> set[str]:
             token = "creaz"
         elif re.fullmatch(r"aggiungo|aggiungere|inserire|inserimento", token):
             token = "inser"
+        elif re.fullmatch(r"salvo|salva|salvare|salvataggio", token):
+            token = "salv"
         elif token in {"ora", "orari", "orario"}:
             token = "ora"
         elif len(token) >= 6 and token.isalpha():
@@ -246,6 +248,10 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
     def coverage(words: set[str]) -> float:
         return sum(weights[word] for word in query & words) / total
 
+    choices = re.search(r"\b([\w’]+)\s+o\s+([\w’]+)\b", focus_question(question), re.IGNORECASE)
+    alternatives = roots(" ".join(choices.groups())) if choices else set()
+    action = re.search(r"\bcome\s+(?:(?:posso|devo)\s+)?(\w+)", focus_question(question), re.IGNORECASE)
+    requested_action = roots(action[1]) if action else set()
     scores = []
     procedural = bool(re.search(r"\bcome\b|da dove|quali passi", question, re.IGNORECASE))
     field_names = set().union(*(roots(p.topic) for p in passages if p.kind == "field"))
@@ -262,6 +268,14 @@ def rank_scores(question: str, passages: list[Passage], similarities: list[float
         score += 0.12 * coverage(roots(p.topic))
         if procedural and p.kind == "steps":
             score += 0.08
+        if len(alternatives) == 2 and alternatives <= roots(p.text):
+            score += 0.50 if p.kind == "field" else 0.10
+        # Un'azione richiesta pesa più di un'azione già compiuta nell'introduzione.
+        infinitives = re.findall(r"\b\w+(?:are|ere|ire)\b", p.text, re.IGNORECASE)
+        if requested_action and requested_action & roots(" ".join(infinitives)):
+            score += 0.22
+        elif requested_action and p.kind == "steps":
+            score -= 0.10
         if p.kind == "field" and roots(p.topic) <= query:
             score += 0.10
         if requested_fields and not requested_fields & roots(p.text) and not parallel:
@@ -297,6 +311,27 @@ def select_passages(question: str, passages: list[Passage], scores: list[float])
     selected = [best]
     first = passages[best]
     query = roots(question)
+    # Conserva il prerequisito adiacente di un comando finale, non l'intero capitolo.
+    if best > 0 and re.search(r"salv|aggiorn|conferm", first.text, re.IGNORECASE):
+        previous = passages[best - 1]
+        if (previous.document_id == first.document_id and previous.scope == first.scope
+                and previous.chapter == first.chapter and previous.topic == first.topic
+                and previous.kind == "prose"
+                and re.match(r"Al termine|Prima di|Dopo aver", previous.text, re.IGNORECASE)):
+            selected.insert(0, best - 1)
+    # Un valore copiato da un altro contesto richiede anche la sua provenienza.
+    if (re.search(r"recuper|invent|da dove|generat", question, re.IGNORECASE)
+            and re.search(r"coincidere|uguale|stesso", first.text, re.IGNORECASE)):
+        tags = scope_tags(passages)
+        references = tags & set(FTS_TOKEN_RE.findall(first.text.casefold()))
+        identifiers = roots(first.topic)
+        for index, p in enumerate(passages):
+            if (p.document_id == first.document_id and p.scope != first.scope
+                    and references & set(FTS_TOKEN_RE.findall(p.scope.casefold()))
+                    and identifiers & roots(p.text) and p.kind == "prose"
+                    and re.search(r"automatic|generat", p.text, re.IGNORECASE)):
+                selected.append(index)
+                break
     # Una procedura generale può rimandare al dettaglio dell'operazione richiesta.
     if first.kind == "steps":
         for index in ranked[1:]:

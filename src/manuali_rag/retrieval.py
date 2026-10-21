@@ -496,9 +496,6 @@ def _procedure_selection(
     if not re.search(r"\bcome\b", question, re.IGNORECASE):
         return None
     for source, hit in enumerate(hits, start=1):
-        focused = _focused_section(hit.content, question)
-        if focused and re.search(r"(?:^|\s)1\.\s", focused):
-            return [index for index, (number, _) in enumerate(excerpts, start=1) if number == source]
         # Un'operazione di correzione non è una semplice consultazione del dettaglio.
         if re.search(r"corregg|corregger|modific", question, re.IGNORECASE) and not re.search(
             r"annull|cronolog|storico|version", question, re.IGNORECASE
@@ -519,6 +516,10 @@ def _procedure_selection(
                                and hits[number - 1].page is not None and hit.page is not None
                                and 0 < hit.page - hits[number - 1].page <= 2]
                     return opening[:1] + steps
+    for source, hit in enumerate(hits, start=1):
+        focused = _focused_section(hit.content, question)
+        if focused and re.search(r"(?:^|\s)1\.\s", focused):
+            return [index for index, (number, _) in enumerate(excerpts, start=1) if number == source]
     return None
 
 
