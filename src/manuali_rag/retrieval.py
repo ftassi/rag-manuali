@@ -514,7 +514,7 @@ def _procedure_selection(
                     continue
                 steps = [index for index, (number, text) in enumerate(excerpts, start=1)
                          if number == source and not text.startswith(("•", "◼", "➢", "❖", "o "))
-                         and re.search(r"clicc|pulsante|icona", text, re.IGNORECASE)]
+                         and re.search(r"clicc|pulsante|icona|premere|premi", text, re.IGNORECASE)]
                 if steps:
                     opening = [index for index, (number, text) in enumerate(excerpts, start=1)
                                if re.search(r"cliccando sulla|selezionare", text, re.IGNORECASE)
