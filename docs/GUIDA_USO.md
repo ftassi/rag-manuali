@@ -755,3 +755,37 @@ formulazione. Questo riscontro completa la verifica personale sopra indicata
 come ancora da raccogliere, sul codice applicativo `f45bcde`.
 Il login singolo era già stato approvato. Per estendere il collaudo, provare nuove
 domande su entrambi i manuali e verificare anche richieste ambigue o non documentate.
+
+
+## 20. Collaudare il contesto e i passaggi conclusivi
+
+Nelle nuove domande verifica anche questi aspetti: stato da mantenere durante la
+configurazione, comando che salva le informazioni dopo l'inserimento, provenienza
+di un codice da riutilizzare e procedura di correzione di un elemento già salvato.
+Un'immagine pertinente non basta se il testo omette il passaggio decisivo.
+
+Se la risposta è errata, conserva domanda esatta, risposta completa e pagine
+mostrate. Specifica se il contenuto era già salvato. Le prove personali offline
+restano distinte dal collaudo automatico: una risposta può superare i criteri
+minimi e restare poco chiara nell'uso reale.
+
+I sei casi del 21 ottobre sono conservati sul Raspberry in
+`data/evaluations/spontaneous-reviewed-cases-2026-10-21.json`, con baseline
+separata e criteri iniziali conservati. Per ripeterli:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+PYTHONIOENCODING=utf-8 .venv/bin/python scripts/evaluate_manual_cases.py \
+  --cases data/evaluations/spontaneous-reviewed-cases-2026-10-21.json \
+  --output data/evaluations/spontaneous-next.json \
+  --api-url http://127.0.0.1:8000
+```
+
+
+Sul codice `14df8f7`, verificati sul Raspberry lint e **99 test**,
+**6/6 nuovi casi**, **36/36 AGENDE** e **51/51 QARA**, con immagini e citazioni.
+Passata anche la domanda sullo stato in configurazione con rete esterna negata
+dal kernel, insieme ai controlli HTTP sintetici **6/6**. Report finali locali:
+`spontaneous-final-report-2026-10-21.json`, `agende-regression-2026-10-21.json`,
+`qara-regression-2026-10-21.json`. La prova personale delle prime quattro domande
+resta il passo successivo, soprattutto per confermare il testo della nota salvata.

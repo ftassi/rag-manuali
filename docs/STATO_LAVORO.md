@@ -6,6 +6,60 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Nuove domande spontanee: correzione — 21 ottobre 2026
+
+L'utente ha eseguito offline sei nuove formulazioni: quattro risposte non accettate
+(stato durante configurazione, salvataggio di prestazioni/contratto, provenienza
+del codice Provider, correzione di una nota salvata) e due corrette (chiarimento
+sullo stato senza oggetto e astensione sulla password HERO non documentata).
+Le approvazioni precedenti su creazione agenda e domanda composta restano valide
+per quei casi, non garantiscono la correttezza di tutte le nuove formulazioni.
+
+Codice `14df8f7`: le alternative esplicite nei valori privilegiano il campo che
+le documenta, l'azione richiesta prevale sull'azione già compiuta nel contesto,
+e i comandi finali mantengono il prerequisito adiacente (ritorno alla schermata).
+Se un codice deve coincidere con quello di un altro contesto citato, una domanda
+sulla sua provenienza recupera anche la generazione automatica documentata.
+La modifica richiesta ha precedenza su elenchi numerati estranei; il testo
+procedurale rimuove numeri di riga e rinvii a elenchi non selezionati senza cambiare
+azioni, condizioni o negazioni. Nessuna risposta privata predefinita nel codice.
+
+Criteri privati `data/evaluations/spontaneous-cases-2026-10-21.json` e baseline
+`spontaneous-baseline-2026-10-21.json`, conservati sul Raspberry. La riproduzione
+iniziale ha dato 3/6: sulla nota ha recuperato i passi corretti, mentre l'utente
+ha segnalato frasi mescolate. Non trattare questo risultato automatico come
+approvazione personale: richiesto il testo esatto per riprodurre la variante.
+Criteri rafforzati per la nota in `spontaneous-reviewed-cases-2026-10-21.json`,
+con richiesta di apertura/icona e divieto dei frammenti sospesi; criteri precedenti
+conservati. Primo giro di recupero 6/6, poi completata anche la pulizia procedurale.
+
+Lint e **99 test** superati sul Raspberry. Il giro intermedio `9267160` ha
+superato i sei casi nuovi ma rilevato una regressione su un'agenda già attiva
+(35/36 AGENDE): corretta sul commit finale riconoscendo l'azione anche in
+istruzioni come «effettuare le modifiche». Report intermedio conservato con
+suffisso `-9267160`; nessun criterio storico modificato.
+
+Esiti finali sullo stesso codice `14df8f7`: **6/6 nuovi casi**, **36/36 AGENDE**,
+**51/51 QARA**, tutti via API con contenuti, documenti, pagine, citazioni e
+immagini verificati. Report privati `spontaneous-final-report-2026-10-21.json`,
+`agende-regression-2026-10-21.json` e `qara-regression-2026-10-21.json`.
+La nota riprodotta sul codice finale segue apertura della nota/Mostra tutto,
+icona matita di modifica e Salva, con pagine 57 e 59; eliminati marcatori di
+tabella e rinvii sospesi. Resta da ottenere la conferma personale sul problema
+originariamente osservato.
+
+Prova runtime nella slice con rete esterna bloccata dal kernel: domanda sullo
+stato durante configurazione, interfaccia e immagine citata disponibili;
+importazione/interrogazione HTTP sintetica **6/6** con indice temporaneo.
+`make health` e `make ollama-check` superati. Indice invariato: 3 documenti,
+236 chunk. Nessuna reingestione o nuovo modello. Nessuna nuova prova fisica
+con Wi-Fi disattivato dopo questa modifica.
+
+Prossimo passo: prova personale offline delle prime quattro domande sulla versione
+corretta, con particolare attenzione alla nota salvata. Se resta un errore,
+conservare il testo esatto e correggere quel caso prima di ampliare il collaudo.
+Se approvate, alternative: ulteriori formulazioni spontanee oppure terzo manuale.
+
 ## Prova pratica offline approvata — 21 ottobre 2026
 
 Sul codice applicativo `f45bcde`, salvato con documentazione in `2c83632`,
