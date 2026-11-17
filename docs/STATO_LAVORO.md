@@ -75,9 +75,16 @@ e **51/51** QARA nell'indice ampliato. Report HTML e JSON privati in
 `data/evaluations/collaudo-99JiIv/`. Nessuna prova con Wi-Fi spento svolta
 in questo passaggio.
 
-Prossimo passo: rivedere offline il report esteso sul Raspberry per valutare
-la leggibilità e la pertinenza delle immagini. In alternativa, aggiungere
-nuove formulazioni mai usate per la correzione.
+L'utente ha visionato il report esteso e non ha segnalato problemi.
+La conferma riguarda il report già generato; non è una nuova esecuzione
+con Wi-Fi spento.
+
+Prossimo passo consigliato: creare una suite privata separata con domande
+inedite di configurazione e navigazione Drug Therapy, usando formulazioni
+spontanee e qualche caso ambiguo tra i manuali. Eseguirla dal Terminale
+con `make collaudo-offline OFFLINE_CASES=...`, prima di cambiare il codice;
+conservare la suite da 16 casi come regressione. In alternativa, importare
+il manuale Timeline e verificare la distinzione tra Terapia e Timeline.
 
 ## Collaudo da Terminale approvato — 17 novembre 2026
 
