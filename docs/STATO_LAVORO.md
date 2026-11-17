@@ -25,8 +25,23 @@ Report HTML e JSON locali in `data/evaluations/collaudo-6FqgI9/` e
 `data/evaluations/collaudo-7sdakk/`. Durata circa 124 s al primo giro e 20 s
 alla ripetizione con cache calda. Nessuna modifica al codice di risposta.
 
-Prossimo passo: correggere la selezione dei due passaggi, poi ripetere gli
-otto casi e la regressione dei due manuali precedenti nell'indice ampliato.
+### Collaudo ampliato prima delle correzioni
+
+Su richiesta dell'utente, aggiunti otto casi su modelli di terapia, prontuari,
+consultazione del catalogo e dizionari, mantenendo invariati i primi otto.
+Suite privata: `data/evaluations/tre-manuali-esteso-2026-11-17.json`.
+Sul commit `92e82ea`, con rete esterna bloccata: **9/16** in circa 153 s,
+di cui **5/12** sul nuovo manuale, **3/3** controlli sui precedenti e **1/1**
+richiesta ambigua. Passano 3/8 nuove formulazioni. Nei sette errori il documento
+è corretto: quattro risposte usano la pagina attesa ma sono fuori bersaglio
+o incomplete, tre recuperano pagine sbagliate. In particolare la creazione
+del prontuario si ferma al pulsante iniziale e omette nome, descrizione e
+salvataggio. HTML e JSON locali in `data/evaluations/collaudo-8WYTSk/`.
+Codice di risposta e criteri precedenti invariati.
+
+Prossimo passo: correggere prima il recupero di sezione e poi quello dei
+passaggi richiesti, anche su più pagine; ripetere tutti i 16 casi e le
+regressioni storiche nell'indice ampliato.
 
 ## Collaudo da Terminale approvato — 17 novembre 2026
 
