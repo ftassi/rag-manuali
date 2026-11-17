@@ -787,5 +787,5 @@ Sul codice `14df8f7`, verificati sul Raspberry lint e **99 test**,
 Passata anche la domanda sullo stato in configurazione con rete esterna negata
 dal kernel, insieme ai controlli HTTP sintetici **6/6**. Report finali locali:
 `spontaneous-final-report-2026-10-21.json`, `agende-regression-2026-10-21.json`,
-`qara-regression-2026-10-21.json`. La prova personale delle prime quattro domande
-resta il passo successivo, soprattutto per confermare il testo della nota salvata.
+`qara-regression-2026-10-21.json`. Il 17 novembre 2026 l’utente ha approvato testo e immagini per tutte e quattro
+le domande ripetute, compresa la correzione della nota già salvata.

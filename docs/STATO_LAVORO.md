@@ -1,10 +1,21 @@
-# Punto di ripresa — 21 ottobre 2026
+# Punto di ripresa — 17 novembre 2026
 
 ## Obiettivo finale
 
 Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte nel
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
+
+## Ripetizione pratica approvata — 17 novembre 2026
+
+L'utente ha confermato la correttezza di testo e immagini per tutte e quattro
+le domande ripetute: stato dell'agenda durante la configurazione, salvataggio di
+prestazioni e contratto, provenienza del codice Provider e correzione di una nota
+già salvata. Questo chiude la verifica personale delle correzioni descritte sotto.
+Non è stato specificato lo stato del Wi-Fi durante questa ripetizione.
+
+Prossimo passo consigliato: collaudare un terzo manuale. In alternativa,
+ampliare le domande spontanee sui due manuali già indicizzati.
 
 ## Nuove domande spontanee: correzione — 21 ottobre 2026
 
@@ -45,8 +56,7 @@ immagini verificati. Report privati `spontaneous-final-report-2026-10-21.json`,
 `agende-regression-2026-10-21.json` e `qara-regression-2026-10-21.json`.
 La nota riprodotta sul codice finale segue apertura della nota/Mostra tutto,
 icona matita di modifica e Salva, con pagine 57 e 59; eliminati marcatori di
-tabella e rinvii sospesi. Resta da ottenere la conferma personale sul problema
-originariamente osservato.
+tabella e rinvii sospesi. Il 17 novembre è arrivata la conferma personale.
 
 Prova runtime nella slice con rete esterna bloccata dal kernel: domanda sullo
 stato durante configurazione, interfaccia e immagine citata disponibili;
@@ -54,11 +64,6 @@ importazione/interrogazione HTTP sintetica **6/6** con indice temporaneo.
 `make health` e `make ollama-check` superati. Indice invariato: 3 documenti,
 236 chunk. Nessuna reingestione o nuovo modello. Nessuna nuova prova fisica
 con Wi-Fi disattivato dopo questa modifica.
-
-Prossimo passo: prova personale offline delle prime quattro domande sulla versione
-corretta, con particolare attenzione alla nota salvata. Se resta un errore,
-conservare il testo esatto e correggere quel caso prima di ampliare il collaudo.
-Se approvate, alternative: ulteriori formulazioni spontanee oppure terzo manuale.
 
 ## Prova pratica offline approvata — 21 ottobre 2026
 
