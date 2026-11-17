@@ -6,6 +6,28 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Terzo manuale: configurazione Drug Therapy — 17 novembre 2026
+
+Importato sul Raspberry il PDF di configurazione Terapia 6.5.0 scelto
+dall'utente, distinto dai manuali Timeline e Utente. Importazione senza
+avvisi: 107 pagine, 119 frammenti. Indice complessivo: 4 documenti (3 PDF
+più il Markdown sintetico), 355 frammenti. Backup SQLite precedente
+all'importazione in `data/backups/`.
+
+Sul codice `7ff2212`, suite privata `data/evaluations/tre-manuali-2026-11-17.json`
+eseguita due volte nella slice con rete esterna bloccata, senza imporre un
+manuale alla ricerca: **6/8** in entrambi i giri. Superati 2/4 quesiti sul
+nuovo manuale, 3/3 controlli sui manuali precedenti e la richiesta ambigua.
+Nei due errori il documento e la pagina erano corretti; il sistema ha
+estratto un passaggio vicino sul riconoscimento della versione invece del
+percorso web e uno sull'apertura di Preferenze invece della ricerca con filtro.
+Report HTML e JSON locali in `data/evaluations/collaudo-6FqgI9/` e
+`data/evaluations/collaudo-7sdakk/`. Durata circa 124 s al primo giro e 20 s
+alla ripetizione con cache calda. Nessuna modifica al codice di risposta.
+
+Prossimo passo: correggere la selezione dei due passaggi, poi ripetere gli
+otto casi e la regressione dei due manuali precedenti nell'indice ampliato.
+
 ## Collaudo da Terminale approvato — 17 novembre 2026
 
 L'utente ha eseguito `make collaudo-offline`, ha confermato che funziona e
@@ -15,12 +37,7 @@ Sul commit applicativo `fd9664f`, verificati 99 test e 6/6 casi della suite
 breve nella slice con rete esterna bloccata. Non è stato specificato se
 il Wi-Fi fosse spento durante la ripetizione personale.
 
-Prossimo passo: collaudare un terzo manuale. I due PDF attualmente presenti
-nella cartella dei manuali risultano già indicizzati; il file di prova Markdown
-non conta come terzo manuale. Attendere il PDF scelto prima di importare.
-Preparare almeno casi sul nuovo documento, controlli sui due precedenti e
-una domanda ambigua, senza limitare la ricerca a un documento. Conservare le
-domande, i report e le pagine sul Raspberry.
+Il primo collaudo con un terzo manuale è documentato nella sezione sopra.
 
 ## Ripetizione pratica approvata — 17 novembre 2026
 
