@@ -498,13 +498,71 @@ def _focused_section(content: str, question: str) -> str | None:
     return None
 
 
+SECTION_HEADING = re.compile(r"(?m)^\s*(\d+(?:\.\d+)+[ \t]+[^\n.!?]+)\s*$")
+
+
+def _creation_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
+    """Completa l'avvio della creazione solo se trova una chiusura verificabile."""
+    request = re.search(
+        r"\bcome\s+(?:(?:posso|devo)\s+)?(?:creo|creare)\s+(.+?)(?=[,?.]|$)",
+        question, re.IGNORECASE,
+    )
+    if not request:
+        return None
+    subject = roots(request[1]) - roots("un una nuovo nuova vuoto vuota")
+    candidates = {}
+    for hit in hits:
+        if hit.page is None:
+            continue
+        blocks = SECTION_HEADING.split(hit.content)
+        for index in range(1, len(blocks), 2):
+            heading, body = blocks[index:index + 2]
+            if not re.search(r"\b(?:nuov[oa]|creazione)\b", heading, re.IGNORECASE):
+                continue
+            matched = subject & roots(heading)
+            if not matched:
+                continue
+            lines = _source_sentences(body)
+            opening = next((line for line in lines if re.search(
+                r"\b(?:clicc\w*|prem\w*)\b", line, re.IGNORECASE
+            ) and roots(line) & matched), None)
+            if not opening:
+                continue
+            fields = [line for line in lines if re.search(
+                r"\b(?:inserire|compilare|specificare)\b", line, re.IGNORECASE
+            ) and line != opening]
+            # Non attraversare un altro titolo. Cerca il salvataggio iniziale
+            # della pagina successiva soltanto se conferma lo stesso oggetto.
+            if index + 2 != len(blocks):
+                continue
+            for following in hits:
+                if following.document_id != hit.document_id or following.page != hit.page + 1:
+                    continue
+                prefix = SECTION_HEADING.split(following.content, maxsplit=1)[0]
+                end = next((line for line in _source_sentences(prefix)[:6]
+                            if re.search(r"\b(?:salva|salvare|conferma)\b", line, re.IGNORECASE)
+                            and re.search(r"\bcreat[oa]\b", line, re.IGNORECASE)
+                            and roots(line) & matched), None)
+                if end and fields:
+                    text = "\n".join([*(f"{line} [S1]" for line in [opening, *fields]),
+                                       f"{end} [S2]"])
+                    candidates[(hit.document_id, hit.page, text)] = (len(matched), Answer(
+                        text, [hit, following]
+                    ))
+    ranked = sorted(candidates.values(), key=lambda item: item[0], reverse=True)
+    return ranked[0][1] if ranked and (len(ranked) == 1 or ranked[0][0] > ranked[1][0]) else None
+
+
 def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
     """Preferisce una sezione che documenta insieme il soggetto e l'azione richiesta."""
     flags = re.IGNORECASE
     menu = re.search(r"quale voce.+\bmenu\b|da quale voce", question, flags)
     hierarchy = re.search(r"gerarchia|struttura ad albero", question, flags)
     placement = re.search(r"dove\s+(?:compare|appar[ei]|viene mostrat\w*)", question, flags)
-    if sum(bool(mode) for mode in (menu, hierarchy, placement)) != 1:
+    address = re.search(r"\b(?:url|indirizzo web|percorso web)\b", question, flags)
+    lookup = re.search(r"\b(?:come|dove)\s+(?:posso\s+)?(?:cerco|cercare|ricerco)\b", question, flags)
+    read_only = re.search(r"\b(?:sola lettura|modificabil\w*)\b", question, flags)
+    if sum(bool(mode) for mode in (menu, hierarchy, placement, address, lookup, read_only)) != 1:
         return None
     query = roots(question) - roots(
         "quale voce menu apre aprire sezione schermata elenco lista dove compare appare "
@@ -524,7 +582,7 @@ def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
         if hit.page is None:
             continue
         # Il soggetto deve comparire nel titolo reale o nel testo della stessa sottosezione.
-        blocks = re.split(r"(?m)^\s*(\d+(?:\.\d+)+[ \t]+[^\n.!?]+)\s*$", hit.content)
+        blocks = SECTION_HEADING.split(hit.content)
         for heading, body in zip(blocks[1::2], blocks[2::2], strict=True):
             title = roots(heading)
             sentences = _source_sentences(body)
@@ -549,6 +607,17 @@ def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                     r"\b(?:comparir\w*|apparir\w*|verr\w* mostrat\w*)\b", line, flags
                 ):
                     matched = query & roots(line) & title
+                    evidence = [line]
+                elif address and re.search(r"https?://[^\s]+", line, flags):
+                    matched = query & (roots(line) | title)
+                    evidence = [line]
+                elif (lookup and re.search(r"\bricerca\b", heading, flags)
+                      and re.search(r"\b(?:cercare|ricercare)\b", line, flags)):
+                    matched = (query - roots("cerco cercare ricerca ricerco")) & roots(line) & title
+                    evidence = [line]
+                elif read_only and re.search(r"\bin sola lettura\b", line, flags):
+                    matched = (query - roots("sola lettura modificabile modificabili consultazione")) \
+                        & roots(line) & title
                     evidence = [line]
                 else:
                     continue
@@ -888,7 +957,8 @@ class AnswerService:
             structured = self._structured_answer(question, hits, document_id)
             if structured is not None:
                 return structured
-            section = _section_evidence(question, self.retriever.store.all_hits(document_id))
+            indexed = self.retriever.store.all_hits(document_id)
+            section = _section_evidence(question, indexed) or _creation_evidence(question, indexed)
             if section is not None:
                 return section
         if semantic:
