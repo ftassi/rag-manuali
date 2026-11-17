@@ -6,6 +6,22 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Collaudo da Terminale approvato — 17 novembre 2026
+
+L'utente ha eseguito `make collaudo-offline`, ha confermato che funziona e
+preferisce mantenerlo nel Terminale. Il comando ripete i casi locali salvati e
+produce un report HTML con risposte e immagini incorporate, oltre al JSON.
+Sul commit applicativo `fd9664f`, verificati 99 test e 6/6 casi della suite
+breve nella slice con rete esterna bloccata. Non è stato specificato se
+il Wi-Fi fosse spento durante la ripetizione personale.
+
+Prossimo passo: collaudare un terzo manuale. I due PDF attualmente presenti
+nella cartella dei manuali risultano già indicizzati; il file di prova Markdown
+non conta come terzo manuale. Attendere il PDF scelto prima di importare.
+Preparare almeno casi sul nuovo documento, controlli sui due precedenti e
+una domanda ambigua, senza limitare la ricerca a un documento. Conservare le
+domande, i report e le pagine sul Raspberry.
+
 ## Ripetizione pratica approvata — 17 novembre 2026
 
 L'utente ha confermato la correttezza di testo e immagini per tutte e quattro
