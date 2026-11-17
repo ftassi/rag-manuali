@@ -775,3 +775,16 @@ def test_edit_procedure_precedes_an_unrelated_numbered_list():
                 (2, 'Premere Modifica.'), (2, 'Premere Salva.')]
     selected = _procedure_selection('Come modifico una nota?', [unrelated, edit], excerpts)
     assert selected == [3, 4]
+
+
+def test_section_placement_prefers_created_object_over_screen_category():
+    from manuali_rag.retrieval import _section_evidence
+
+    group, board = _hit(1, 0.5), _hit(2, 0.5)
+    group.content = '3.1 Nuovo gruppo\n\nIl nuovo gruppo comparirà in fondo alla lista.'
+    board.content = '3.2 Nuovo pannello\n\nIl nuovo pannello comparirà sulla destra.'
+    answer = _section_evidence(
+        'Dopo che creo un nuovo gruppo nei pannelli, dove compare?', [board, group]
+    )
+    assert answer is not None and answer.sources == [group]
+    assert 'fondo alla lista' in answer.text

@@ -510,6 +510,15 @@ def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
         "quale voce menu apre aprire sezione schermata elenco lista dove compare appare "
         "viene mostrato dopo creo nuova struttura organizzata gerarchia albero"
     )
+    if placement:
+        # Se la domanda descrive prima l'oggetto creato e poi la schermata,
+        # la schermata è il contesto, non l'oggetto che deve comparire.
+        creation = re.search(
+            r"\b(?:creo|creat[oa]|aggiungo|inserisco)\s+(.+?)"
+            r"\s+(?:nel|nella|nei|nelle|in)\s+", question, flags,
+        )
+        if creation:
+            query &= roots(creation[1])
     candidates = {}
     for hit in hits:
         if hit.page is None:
