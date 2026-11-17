@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import subprocess
 import time
 from dataclasses import replace
 from datetime import UTC, datetime
+from html import escape
 from pathlib import Path
 
 import httpx
@@ -15,6 +17,45 @@ import httpx
 from manuali_rag.cli import _components
 from manuali_rag.config import Settings
 from manuali_rag.retrieval import CLARIFICATION_TEXT, AnswerService, Retriever
+
+
+def write_html_report(path: Path, report: dict, images: list[list[tuple[str, str]]]) -> None:
+    sections = []
+    for case, previews in zip(report["cases"], images, strict=True):
+        status = "Superato" if case["passed"] else "Da verificare"
+        checks = {
+            "Testo": case["facts_ok"] and not case["extraneous"],
+            "Fonti": case["sources_ok"],
+            "Citazioni": case["citations_ok"],
+            "Immagini": case["images_ok"],
+        }
+        details = " · ".join(f"{label}: {'OK' if ok else 'da verificare'}"
+                             for label, ok in checks.items())
+        figures = "".join(
+            f'<figure><figcaption>{escape(label)}</figcaption>'
+            f'<img alt="{escape(label)}" src="{escape(url)}"></figure>'
+            for label, url in previews
+        )
+        sections.append(
+            f'<section><h2>{escape(case["question"])}</h2>'
+            f'<p><strong>{status}</strong> · {details}</p>'
+            f'<p class="answer">{escape(case["answer"])}</p>{figures}</section>'
+        )
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(
+        '<!doctype html><html lang="it"><meta charset="utf-8">'
+        '<meta http-equiv="Content-Security-Policy" '
+        'content="default-src \'none\'; img-src data:; style-src \'unsafe-inline\'">'
+        '<meta name="viewport" content="width=device-width, initial-scale=1">'
+        '<title>Collaudo RAG</title><style>body{font:1rem system-ui;max-width:64rem;'
+        'margin:2rem auto;padding:0 1rem}section{border-top:1px solid #999}'
+        '.answer{white-space:pre-wrap}img{max-width:100%;height:auto}</style>'
+        f'<h1>Collaudo RAG: {report["passed"]}/{report["total"]}</h1>'
+        f'<p>{escape(report["timestamp_utc"])} · Checkout {escape(report["code_commit"][:7])}</p>'
+        '<p>Gli esiti automatici non valutano la naturalezza della risposta o la pertinenza visiva.</p>'
+        + "".join(sections) + '</html>',
+        encoding="utf-8",
+    )
 
 
 def documents_match(
@@ -29,20 +70,28 @@ def main() -> None:
     parser.add_argument("--cases", required=True, type=Path)
     parser.add_argument("--output", required=True, type=Path)
     parser.add_argument("--api-url", help="Collauda il servizio HTTP, incluse le pagine citate")
+    parser.add_argument("--html", type=Path, help="Salva anche un report HTML con immagini incorporate")
     parser.add_argument("--model", help="Confronta un modello locale nella modalità CLI")
     args = parser.parse_args()
     if args.model and args.api_url:
         parser.error("--model si usa senza --api-url")
+    if args.html and not args.api_url:
+        parser.error("--html richiede --api-url")
+    if args.html and args.html.resolve() == args.output.resolve():
+        parser.error("--html e --output devono indicare due file distinti")
     cases = json.loads(args.cases.read_text(encoding="utf-8"))["cases"]
     if not cases:
         raise ValueError("Il file non contiene casi di collaudo")
     settings = Settings.from_env()
     if args.model:
         settings = replace(settings, llm_model=args.model)
-    store, embedder, llm = _components(settings)
-    service = AnswerService(Retriever(store, embedder, settings), llm, settings)
+    service = None
+    if not args.api_url:
+        store, embedder, llm = _components(settings)
+        service = AnswerService(Retriever(store, embedder, settings), llm, settings)
     commit = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
     results = []
+    previews = []
     for case in cases:
         expected_pages = case.get("expected_pdf_pages", [])
         expected_documents = case.get("expected_document_ids", [])
@@ -50,8 +99,10 @@ def main() -> None:
             raise ValueError(f"Specificare pagine attese o astensione per {case['id']}")
         started = time.perf_counter()
         images_ok = None
+        case_previews = []
         if args.api_url:
-            with httpx.Client(base_url=args.api_url, timeout=settings.llm_timeout + 120) as client:
+            with httpx.Client(base_url=args.api_url, timeout=settings.llm_timeout + 120,
+                              trust_env=False) as client:
                 response = client.post("/api/questions", json={
                     "question": case["question"],
                     "document_id": case.get("document_id"),
@@ -64,15 +115,20 @@ def main() -> None:
                 documents = [source["document_id"] for source in payload["sources"]]
                 source_count = len(payload["sources"])
                 images_ok = bool(source_count) or case.get("expect_abstention", False)
-                for source in payload["sources"]:
+                for index, source in enumerate(payload["sources"], start=1):
                     if not source.get("page_url"):
                         images_ok = False
                         continue
                     image = client.get(source["page_url"])
-                    images_ok = images_ok and image.is_success and image.headers.get(
-                        "content-type", ""
-                    ).startswith("image/")
+                    mime = image.headers.get("content-type", "").split(";")[0].strip().lower()
+                    image_ok = image.is_success and mime.startswith("image/")
+                    images_ok = images_ok and image_ok
+                    if args.html and image_ok and mime in {"image/png", "image/jpeg", "image/webp"}:
+                        label = f'[S{index}] {source["manual_title"]}, pagina {source["page"]}'
+                        encoded = base64.b64encode(image.content).decode("ascii")
+                        case_previews.append((label, f"data:{mime};base64,{encoded}"))
         else:
+            assert service is not None
             answer = service.answer(
                 case["question"], document_id=case.get("document_id"), include_images=False
             )
@@ -124,7 +180,12 @@ def main() -> None:
             "wall_seconds": round(time.perf_counter() - started, 3),
         }
         results.append(result)
-        print(json.dumps(result, ensure_ascii=False), flush=True)
+        previews.append(case_previews)
+        if args.html:
+            status = "OK" if result["passed"] else "DA VERIFICARE"
+            print(f'{len(results)}/{len(cases)} {status} — {case["id"]}', flush=True)
+        else:
+            print(json.dumps(result, ensure_ascii=False), flush=True)
     report = {
         "timestamp_utc": datetime.now(UTC).isoformat(),
         "code_commit": commit,
@@ -137,6 +198,9 @@ def main() -> None:
     }
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if args.html:
+        write_html_report(args.html, report, previews)
+        print(f"Report da aprire nel browser: {args.html.resolve()}", flush=True)
     print(f"Collaudo: {report['passed']}/{report['total']}; report: {args.output}", flush=True)
     raise SystemExit(0 if report["passed"] == report["total"] else 1)
 

@@ -22,6 +22,9 @@ UI_SMOKE_OUTPUT ?= benchmark-results/ui-smoke.json
 UI_SMOKE_SCREENSHOT ?= benchmark-results/ui-smoke.png
 REGRESSION_DIR ?= benchmark-results/regression
 MANUAL_EVAL_OUTPUT ?= data/evaluations/manual-eval.json
+OFFLINE_CASES ?= data/evaluations/spontaneous-reviewed-cases-2026-10-21.json
+
+.PHONY: collaudo-offline
 
 .PHONY: help init ollama-check benchmark rag-eval embedding-eval hybrid-eval e2e-eval manual-eval ingestion-eval smoke-http smoke-ui regression regression-check start start-dev serve test lint check format ingest search ask documents health
 
@@ -74,6 +77,14 @@ ingestion-eval: ## Prova importazione, ricerca e risposta su un Markdown sinteti
 manual-eval: ## Collauda un manuale con domande private: CASES=percorso.json
 	@test -n "$(CASES)" || { echo "Uso: make manual-eval CASES=percorso.json"; exit 1; }
 	@"$(BIN)/python" scripts/evaluate_manual_cases.py --cases "$(CASES)" --output "$(MANUAL_EVAL_OUTPUT)"
+
+collaudo-offline: ## Ripete le domande salvate e produce un report locale con immagini
+	@test -r "$(OFFLINE_CASES)" || { echo "Suite non trovata: $(OFFLINE_CASES)"; exit 1; }
+	@mkdir -p data/evaluations
+	@report_dir=$$(mktemp -d data/evaluations/collaudo-XXXXXX) && \
+		PYTHONIOENCODING=utf-8 "$(BIN)/python" scripts/evaluate_manual_cases.py \
+		--cases "$(OFFLINE_CASES)" --api-url "http://127.0.0.1:$(PORT)" \
+		--output "$$report_dir/report.json" --html "$$report_dir/report.html"
 
 smoke-http: ## Prova API HTTP, upload e domanda con dati sintetici temporanei
 	@test -x "$(BIN)/python" || { echo "Ambiente non inizializzato: esegui make init"; exit 1; }

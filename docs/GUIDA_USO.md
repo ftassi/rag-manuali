@@ -789,3 +789,31 @@ dal kernel, insieme ai controlli HTTP sintetici **6/6**. Report finali locali:
 `spontaneous-final-report-2026-10-21.json`, `agende-regression-2026-10-21.json`,
 `qara-regression-2026-10-21.json`. Il 17 novembre 2026 l’utente ha approvato testo e immagini per tutte e quattro
 le domande ripetute, compresa la correzione della nota già salvata.
+
+## 21. Ripetere un collaudo offline senza ricopiare le domande
+
+Sul Raspberry, con **Manuali RAG** attivo, apri il Terminale ed esegui:
+
+```bash
+cd /home/michele/progetti/rag-manuali
+make collaudo-offline
+```
+
+Il comando usa l'API locale e ripete i sei casi salvati del 21 ottobre. Puoi
+disattivare il Wi-Fi prima di avviarlo per una prova fisica senza rete; non serve
+SSH. A fine prova apri in Firefox il percorso di `report.html` stampato nel
+Terminale. Troverai domande, risposte, esiti e immagini delle pagine citate.
+Le immagini sono incorporate e il report resta leggibile anche a servizio spento.
+
+Ogni esecuzione conserva HTML e JSON in una cartella distinta sotto
+`data/evaluations/`. I report contengono testo e pagine dei manuali: restano
+locali e non vanno pubblicati. Per il riscontro basta indicare il numero della
+domanda o il suo ID nel Terminale e cosa non torna: niente trascrizione integrale.
+L'esito automatico verifica termini, fonti, citazioni e disponibilità delle
+immagini; qualità del testo e pertinenza visiva restano da valutare nel report.
+
+Per una suite più ampia, riusa un altro file di casi già salvato:
+
+```bash
+make collaudo-offline OFFLINE_CASES=data/evaluations/agende-complete-cases-2026-10-19.json
+```
