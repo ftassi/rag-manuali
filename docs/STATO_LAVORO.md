@@ -43,6 +43,24 @@ Prossimo passo: correggere prima il recupero di sezione e poi quello dei
 passaggi richiesti, anche su più pagine; ripetere tutti i 16 casi e le
 regressioni storiche nell'indice ampliato.
 
+### Scelta della sezione corretta
+
+Sul codice `b71855b` il recupero verifica che soggetto e azione siano
+documentati nella stessa sottosezione. Per le richieste di posizionamento
+distingue l'oggetto creato dal contesto della schermata. In caso di parità
+mantiene il recupero ordinario.
+
+Con rete esterna bloccata: **12/16**, rispetto a 9/16 prima della modifica
+e 11/16 nel giro intermedio. Ora passano tutti e tre i casi che in precedenza
+citavano pagine sbagliate: gerarchia dei modelli (14), nuova radice (15) e
+menu Formulari (28). Passano anche i controlli sui due manuali precedenti e
+la richiesta ambigua. `make check`: lint e **100 test** superati.
+Report finale locale: `data/evaluations/collaudo-KOtmhd/`. Suite invariata.
+
+Prossimo passo: recuperare i quattro passaggi ancora mancanti o incompleti
+(percorso web, filtro Preferenze, creazione completa del prontuario e sola
+lettura nel catalogo), poi ripetere la suite estesa e la regressione storica.
+
 ## Collaudo da Terminale approvato — 17 novembre 2026
 
 L'utente ha eseguito `make collaudo-offline`, ha confermato che funziona e
