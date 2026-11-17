@@ -498,6 +498,62 @@ def _focused_section(content: str, question: str) -> str | None:
     return None
 
 
+def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
+    """Preferisce una sezione che documenta insieme il soggetto e l'azione richiesta."""
+    flags = re.IGNORECASE
+    menu = re.search(r"quale voce.+\bmenu\b|da quale voce", question, flags)
+    hierarchy = re.search(r"gerarchia|struttura ad albero", question, flags)
+    placement = re.search(r"dove\s+(?:compare|appar[ei]|viene mostrat\w*)", question, flags)
+    if sum(bool(mode) for mode in (menu, hierarchy, placement)) != 1:
+        return None
+    query = roots(question) - roots(
+        "quale voce menu apre aprire sezione schermata elenco lista dove compare appare "
+        "viene mostrato dopo creo nuova struttura organizzata gerarchia albero"
+    )
+    candidates = {}
+    for hit in hits:
+        if hit.page is None:
+            continue
+        # Il soggetto deve comparire nel titolo reale o nel testo della stessa sottosezione.
+        blocks = re.split(r"(?m)^\s*(\d+(?:\.\d+)+[ \t]+[^\n.!?]+)\s*$", hit.content)
+        for heading, body in zip(blocks[1::2], blocks[2::2], strict=True):
+            title = roots(heading)
+            sentences = _source_sentences(body)
+            for index, line in enumerate(sentences):
+                if menu and re.match(r"Dal\s+men[uù]\b.*\bvoce\b", line, flags):
+                    pattern = r"^Dal\s+men[uù]\s+(\w+)"
+                    source_menu = re.match(pattern, line, flags)
+                    matched = query & (roots(line) | title)
+                    if source_menu:
+                        matched -= roots(source_menu[1])
+                    evidence = [line]
+                elif hierarchy and re.search(r"\b(?:albero|gerarchia)\b", line, flags):
+                    evidence = [line]
+                    for item in sentences[index + 1:]:
+                        if not item.startswith(("•", "◼", "➢")):
+                            break
+                        evidence.append(item)
+                    if len(evidence) < 3:
+                        continue
+                    matched = query & (roots(" ".join(evidence)) | title)
+                elif placement and re.search(
+                    r"\b(?:comparir\w*|apparir\w*|verr\w* mostrat\w*)\b", line, flags
+                ):
+                    matched = query & roots(line) & title
+                    evidence = [line]
+                else:
+                    continue
+                if not matched:
+                    continue
+                key = (hit.document_id, hit.page, tuple(evidence))
+                candidates[key] = (len(matched), hit, evidence)
+    ranked = sorted(candidates.values(), key=lambda entry: entry[0], reverse=True)
+    if not ranked or (len(ranked) > 1 and ranked[0][0] == ranked[1][0]):
+        return None
+    _, hit, evidence = ranked[0]
+    return Answer("\n".join(f"{line} [S1]" for line in evidence), [hit])
+
+
 def _procedure_selection(
     question: str, hits: list[SearchHit], excerpts: list[tuple[int, str]]
 ) -> list[int] | None:
@@ -823,6 +879,9 @@ class AnswerService:
             structured = self._structured_answer(question, hits, document_id)
             if structured is not None:
                 return structured
+            section = _section_evidence(question, self.retriever.store.all_hits(document_id))
+            if section is not None:
+                return section
         if semantic:
             named = [hit for hit in hits if _has_named_control(question, hit.content)]
             if named:
