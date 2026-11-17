@@ -57,9 +57,27 @@ menu Formulari (28). Passano anche i controlli sui due manuali precedenti e
 la richiesta ambigua. `make check`: lint e **100 test** superati.
 Report finale locale: `data/evaluations/collaudo-KOtmhd/`. Suite invariata.
 
-Prossimo passo: recuperare i quattro passaggi ancora mancanti o incompleti
-(percorso web, filtro Preferenze, creazione completa del prontuario e sola
-lettura nel catalogo), poi ripetere la suite estesa e la regressione storica.
+I quattro passaggi rimanenti sono stati corretti nel giro successivo.
+
+### Recupero dei quattro passaggi rimanenti
+
+Sul codice `23ddce9` le richieste di indirizzo web cercano un URL nel
+passaggio pertinente; quelle di ricerca e consultazione privilegiano
+rispettivamente l'azione di ricerca e la fonte che dichiara la sola lettura.
+La creazione del prontuario collega avvio, compilazione e salvataggio solo
+quando la pagina successiva dello stesso documento conferma lo stesso oggetto.
+Entrambe le pagine sono citate. Non è stata modificata la suite privata.
+
+`make check`: lint e **101 test** superati sul Raspberry. Con rete esterna
+bloccata: **16/16** nella suite estesa (prima 12/16), **36/36** AGENDE
+e **51/51** QARA nell'indice ampliato. Report HTML e JSON privati in
+`data/evaluations/collaudo-WTG82x/`, `data/evaluations/collaudo-FIuZ7F/` e
+`data/evaluations/collaudo-99JiIv/`. Nessuna prova con Wi-Fi spento svolta
+in questo passaggio.
+
+Prossimo passo: rivedere offline il report esteso sul Raspberry per valutare
+la leggibilità e la pertinenza delle immagini. In alternativa, aggiungere
+nuove formulazioni mai usate per la correzione.
 
 ## Collaudo da Terminale approvato — 17 novembre 2026
 
