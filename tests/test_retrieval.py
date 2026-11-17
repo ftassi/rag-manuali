@@ -788,3 +788,24 @@ def test_section_placement_prefers_created_object_over_screen_category():
     )
     assert answer is not None and answer.sources == [group]
     assert 'fondo alla lista' in answer.text
+
+
+def test_creation_evidence_only_follows_the_same_document_to_confirmation():
+    from manuali_rag.retrieval import _creation_evidence
+
+    opening = _hit(1, 0.5)
+    following = _hit(2, 0.5)
+    opening.document_id = following.document_id = 'example'
+    opening.page, following.page = 4, 5
+    opening.content = ('4.2 Nuovo elenco\n\nCliccare su Nuovo per creare un elenco.\n\n'
+                       'Inserire nome e descrizione.')
+    following.content = ('INTESTAZIONE RIPETUTA\nCliccando su Salva viene creato un elenco.\n\n'
+                         '4.3 Altro\n\nEliminare la voce precedente.')
+    question = 'Come creo un elenco vuoto?'
+    answer = _creation_evidence(question, [opening, following])
+    assert answer is not None and answer.sources == [opening, following]
+    assert 'descrizione. [S1]' in answer.text
+    assert 'Cliccando su Salva viene creato un elenco. [S2]' in answer.text
+    assert 'INTESTAZIONE' not in answer.text and 'Eliminare' not in answer.text
+    following.document_id = 'other'
+    assert _creation_evidence(question, [opening, following]) is None

@@ -544,6 +544,12 @@ def _creation_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                             and re.search(r"\bcreat[oa]\b", line, re.IGNORECASE)
                             and roots(line) & matched), None)
                 if end and fields:
+                    command = re.search(
+                        r"\b(?:cliccando|premendo|selezionando)\s+(?:su\s+)?(?:salva|conferma)\b",
+                        end, re.IGNORECASE,
+                    )
+                    if command:
+                        end = end[command.start():]
                     text = "\n".join([*(f"{line} [S1]" for line in [opening, *fields]),
                                        f"{end} [S2]"])
                     candidates[(hit.document_id, hit.page, text)] = (len(matched), Answer(
@@ -608,9 +614,9 @@ def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                 ):
                     matched = query & roots(line) & title
                     evidence = [line]
-                elif address and re.search(r"https?://[^\s]+", line, flags):
-                    matched = query & (roots(line) | title)
-                    evidence = [line]
+                elif address and (url := re.search(r"https?://[^\s]+", line, flags)):
+                    evidence = [line[:url.end()]]
+                    matched = query & (roots(evidence[0]) | title)
                 elif (lookup and re.search(r"\bricerca\b", heading, flags)
                       and re.search(r"\b(?:cercare|ricercare)\b", line, flags)):
                     matched = (query - roots("cerco cercare ricerca ricerco")) & roots(line) & title
