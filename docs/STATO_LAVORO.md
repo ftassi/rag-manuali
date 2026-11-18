@@ -23,9 +23,24 @@ Concepts (pagina 41) anziché l'ingresso Patient Timeline (pagina 9).
 Report locale `data/evaluations/collaudo-iDK6os/report.html`.
 Nessuna modifica al codice o alle suite precedenti; nessun report rimosso.
 
-Prossimo passo: distinguere meglio la voce d'ingresso da una sottovoce
-del suo menu; ripetere gli 11 casi e le regressioni sull'indice ampliato.
-In alternativa, ampliare prima le domande Timeline su sezioni diverse.
+Sul codice `28ff89d` il recupero privilegia il comando esplicitamente
+documentato per accedere alla configurazione richiesta. Con rete
+esterna bloccata e criteri invariati: **11/11 Timeline** (prima 10/11),
+**8/8** indipendenti, **10/10** parafrasi, **10/10** originali,
+**9/9** Drug Therapy inedita e **13/16** suite estesa. Lint e
+**104 test** superati. Report locali rispettivi: `collaudo-gPesA9`,
+`collaudo-a0ntWi`, `collaudo-3JDw84`, `collaudo-fkl5ar`,
+`collaudo-a1G6JA` e `collaudo-71mSR4` sotto `data/evaluations/`.
+
+Nella suite estesa la risposta sull'URL usa Timeline: il percorso è lo
+stesso, ma il criterio richiedeva la fonte Terapia. Gli altri due casi,
+labelling e riconoscimento delle preferenze ereditate, usano frasi fuori
+contesto da Timeline. Nessun criterio modificato e nessuna attribuzione
+causale alla patch senza un confronto a parità di indice.
+
+Prossimo passo: distinguere documentazione condivisa e domande specifiche
+di Terapia, correggere le due risposte fuori contesto e rieseguire le
+suite. Il report Timeline è pronto per la verifica visiva.
 
 ## Nuova serie indipendente — 18 novembre 2026
 
