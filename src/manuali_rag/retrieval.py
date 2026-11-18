@@ -550,13 +550,13 @@ def _workflow_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                 cleaned = re.sub(r"^\d+\s+", "", line)
                 terms = roots(re.sub(r"check\s*list", "checklist", cleaned, flags=flags))
                 overlap = query & terms
-                if (sequence and re.match(r"Dopo il salvataggio\b", cleaned, flags)
-                        and len(overlap - roots("dopo salvataggio posso momento")) >= 2):
-                    remember(hit, [cleaned], len(overlap))
-                elif (permissions and re.search(r"\b(?:solo|soltanto)\b", cleaned, flags)
+                after_save = (sequence and re.match(r"Dopo il salvataggio\b", cleaned, flags)
+                        and len(overlap - roots("dopo salvataggio posso momento")) >= 2)
+                can_see = (permissions and re.search(r"\b(?:solo|soltanto)\b", cleaned, flags)
                       and re.search(r"\b(?:capability|permess\w*|abilitat\w*)\b", cleaned, flags)
                       and re.search(r"\b(?:vedr\w*|vedere|visibil\w*)\b", cleaned, flags)
-                      and len(overlap) >= 2):
+                      and len(overlap) >= 2)
+                if after_save or can_see:
                     remember(hit, [cleaned], len(overlap))
                 elif (location and re.search(r"\b(?:scheda|tab)\b.*(?:aggiuntiv|supplementar)",
                                              cleaned, flags)
