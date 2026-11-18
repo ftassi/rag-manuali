@@ -539,7 +539,18 @@ def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
                 continue
             if match and len(passage.parts) == 1:
                 hit, line = passage.parts[0]
-                candidates[(hit.document_id, hit.page, line)] = (len(match), hit, [line])
+                score = len(match)
+                if link:
+                    # Premia l'oggetto esplicito della relazione rispetto a una
+                    # menzione incidentale (per esempio un complemento singolare).
+                    target_words = FTS_TOKEN_RE.findall(link[1].casefold())
+                    significant = [word for word in target_words if roots(word)]
+                    if significant and re.search(
+                        r"\b" + r"\s+".join(map(re.escape, significant)) + r"\b",
+                        line, flags,
+                    ):
+                        score += 1
+                candidates[(hit.document_id, hit.page, line)] = (score, hit, [line])
     else:
         query = roots(question)
         for hit in hits:
@@ -558,7 +569,7 @@ def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
                     match = roots(icon[1])
                     following = lines[index + 1:index + 2]
                     if following and re.match(r"Consente di\b", following[0], flags):
-                        evidence = [line, following[0]]
+                        evidence = [re.sub(r"^\d+\s+", "", line), following[0]]
                 elif position and re.search(r"\b(?:salva|salvataggio)\b", line, flags):
                     match = roots(position[1]) & roots(line)
                     if len(match) >= 2 and re.search(r"\b(?:lista|elenco)\b", line, flags):
