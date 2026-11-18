@@ -508,12 +508,12 @@ def _operation_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
     """Cerca istruzioni operative e conserva il titolo sulle continuazioni."""
     flags = re.IGNORECASE
     identify = re.search(r"\bicona\b.*(?:rinomin|modific).*elimin", question, flags)
-    title = re.search(r"\bnome\b.*\bconferm\w*\b", question, flags)
+    title = re.search(r"\bnome\b.*\bconferm\w*\b|\bconferm\w*\b.*\bnome\b", question, flags)
     relation = re.search(r"\b(?:colleg|abbin|associ)\w*\b", question, flags)
     if not (identify or title or relation):
         return None
     query = roots(question)
-    aliases = {"model": "template", "pront": "formu"}
+    aliases = {"model": "templ", "pront": "formu"}
     query |= {alias for word, alias in aliases.items() if word in query}
     pages = sorted((h for h in hits if h.page is not None),
                    key=lambda h: (h.document_id, h.page, h.chunk_id))
@@ -558,7 +558,7 @@ def _operation_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                 if len(targets) < 2:
                     continue
                 evidence = [line for line in lines if re.search(
-                    r"\b(?:tab|scheda|selezionare|salva)\b", line, flags
+                    r"\b(?:tab|scheda|selezionare|salva)\b|cliccare.*[+]", line, flags
                 )]
                 if not any(re.search(r"\b(?:tab|scheda)\b", line, flags)
                            and query & roots(line) for line in evidence):
