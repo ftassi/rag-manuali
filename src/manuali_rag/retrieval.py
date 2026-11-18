@@ -70,7 +70,7 @@ def _complete_filter_steps(
 def _needs_clarification(question: str) -> bool:
     # Verbi senza oggetto e pronomi non identificano una procedura; non inventare il contesto.
     normalized = re.sub(
-        r"\b(aprir|chiuder|salvar|modificar|visualizzar|selezionar)(?:lo|la|li|le)\b",
+        r"\b(aprir|chiuder|salvar|modificar|visualizzar|selezionar|configurar)(?:lo|la|li|le)\b",
         r"\1e", question.casefold(),
     )
     tokens = set(FTS_TOKEN_RE.findall(normalized)) - FTS_STOPWORDS
@@ -78,7 +78,7 @@ def _needs_clarification(question: str) -> bool:
         "dove", "devo", "cliccare", "clicco", "aprire", "apro", "lo", "la", "farlo",
         "stato", "cambio", "cambiare", "modifico", "modificare", "attivo", "attivare",
         "disattivo", "è", "aggiorno", "aggiornare", "salvo", "salvare", "configuro",
-        "configurare", "creo", "creare", "chiudere", "visualizzare", "selezionare",
+        "configurare", "creo", "creare", "chiudere", "visualizzare", "selezionare", "vado",
     }
     return not (tokens - generic)
 
@@ -511,15 +511,32 @@ SECTION_HEADING = re.compile(r"(?m)^\s*(\d+(?:\.\d+)+[ \t]+[^\n.!?]+)\s*$")
 def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
     """Usa evidenza diretta per richieste con un controllo o un risultato preciso."""
     flags = re.IGNORECASE
-    field = re.search(r"\bquale campo\b.*\b(?:quanto tempo|durata)\b", question, flags)
-    link = re.search(r"\bdove\s+(?:collego|associo|abbino)\s+(.+?)(?=\s+che\b|[?]|$)",
-                     question, flags)
-    control = re.search(r"\bquale voce\b.*\bcome confermo\b", question, flags)
-    icon = re.search(r"\bquando compare l['’]icona\s+(.+?)\s+(?:accanto|e che)\b",
-                     question, flags)
-    position = re.search(r"\bdopo aver salvato\s+(.+?),\s+dove compare\b", question, flags)
-    tabs = re.search(r"\b(?:quali|quali sono)\b.*\bdue schede\b.*\bschermata\s+(.+?)(?:\s+nel |[?]|$)",
-                     question, flags)
+    field = (
+        re.search(r"\b(?:campo|dove)\b", question, flags)
+        and re.search(r"\b(?:quanto tempo|durata|minut[io])\b", question, flags)
+    )
+    link = re.search(
+        r"\b(?:dove|in quale sezione)\s+(?:si\s+)?(?:colleg|associ|abbin)\w*\s+"
+        r"(.+?)(?=\s+(?:che|alle?|ai|agli)\b|[?]|$)", question, flags,
+    )
+    control = (
+        re.search(r"\b(?:quale|che)\s+(?:voce|opzione)\b", question, flags)
+        and re.search(r"\b(?:conferm|conclud|complet)\w*\b", question, flags)
+    )
+    icon = None
+    if re.search(r"\b(?:quando|condizioni)\b", question, flags):
+        icon = re.search(
+            r"\b(?:icona|simbolo)\s+(.+?)(?=\s+(?:accanto|e)\b|[?]|$)",
+            question, flags,
+        )
+    position = re.search(
+        r"\b(?:dopo aver|una volta)\s+(?:salvat[oa]|registrat[oa])\s+(.+?),"
+        r"\s*(?:dove|in che punto)\b", question, flags,
+    )
+    tabs = (
+        re.search(r"\b(?:qual[ie]|come si chiamano)\b", question, flags)
+        and re.search(r"\b(?:due|2)\s+(?:tab|schede)\b", question, flags)
+    )
     if not any((field, link, control, icon, position, tabs)):
         return None
     candidates = {}
@@ -577,7 +594,7 @@ def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
                         evidence = [line[start.start():] if start else line]
                 elif tabs and re.search(r"\bdue (?:tab|schede)\b", line, flags):
                     following = lines[index + 1:index + 3]
-                    match = roots(tabs[1]) & roots(" ".join(following))
+                    match = query & roots(" ".join(following))
                     if len(following) == 2 and all(item.startswith(("➢", "•", "◼"))
                                                    for item in following):
                         evidence = [line, *following]
