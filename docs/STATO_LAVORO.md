@@ -6,6 +6,26 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Nuova suite trasversale — 18 novembre 2026
+
+Suite privata `data/evaluations/tre-manuali-inedite-b-2026-11-18.json`,
+con criteri fissati prima del giro e ricerca libera. Sul codice `4c0e76c`,
+con rete esterna bloccata: **4/10** in circa 47 s. QARA **1/3**, AGENDE
+**0/2**, Drug Therapy **1/3**, chiarimenti **2/2**. Report locale
+`data/evaluations/collaudo-90pw3U/report.html`. Nessuna modifica al codice,
+all'indice o ai criteri delle altre suite.
+
+Tutti gli otto casi con una fonte attesa hanno scelto il manuale giusto.
+Cinque errori riguardano il passaggio: conferma della stampa, funzione
+dell'icona allegati, fornitori del Suitor, riconoscimento dell'unità locale
+dopo il salvataggio (pagina precedente citata) ed elenco delle due schede.
+Nel sesto caso il campo Slot e la durata sono corretti, ma il report
+boccia l'aggiunta della pagina 1 e di altri campi non richiesti.
+
+Prossimo passo: dare priorità alle risposte focalizzate sui singoli campi
+e completare i passaggi o gli elenchi documentati; ripetere i dieci casi
+senza cambiare i criteri e verificare le suite precedenti.
+
 ## Domande inedite Drug Therapy — 18 novembre 2026
 
 Suite privata separata `data/evaluations/drug-therapy-inedite-2026-11-18.json`.
