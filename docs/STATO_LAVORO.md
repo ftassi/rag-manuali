@@ -21,10 +21,17 @@ cita il piè di pagina. Il controllo di accesso utente C4C si astiene quando
 dovrebbe rispondere; una domanda con il solo pronome riceve invece una
 procedura QARA fuori contesto.
 
-Prossimo intervento consigliato: seguire le sottosezioni operative anche
-quando proseguono sulla pagina seguente e scartare intestazioni e piè di
-pagina. Verificare separatamente il login e i riferimenti senza antecedente,
-poi ripetere la suite inedita e quella da 16 casi con gli stessi criteri.
+Correzione sul codice `c418b90`: il recupero delle istruzioni conserva
+il titolo della sottosezione sulle pagine consecutive dello stesso manuale
+ed esclude i piè di pagina riconosciuti come metadati. Sul Raspberry,
+`make check` ha superato lint e 101 test. Con rete esterna bloccata
+e criteri invariati: **7/9** nella suite inedita (**6/6** Drug Therapy)
+e **16/16** nella suite storica. Report locali:
+`data/evaluations/collaudo-oKXQbj/` e `data/evaluations/collaudo-9JN7Hb/`.
+
+Prossimo passo: correggere il rifiuto sul login utente C4C e chiedere
+chiarimenti quando manca l'oggetto dell'azione (es. «Dove clicco per
+aprirlo?»). Ripetere le due suite senza cambiare i criteri.
 
 ## Terzo manuale: configurazione Drug Therapy — 17 novembre 2026
 
