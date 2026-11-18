@@ -70,7 +70,7 @@ def _complete_filter_steps(
 def _needs_clarification(question: str) -> bool:
     # Verbi senza oggetto e pronomi non identificano una procedura; non inventare il contesto.
     normalized = re.sub(
-        r"\b(aprir|chiuder|salvar|modificar|visualizzar|selezionar|configurar)(?:lo|la|li|le)\b",
+        r"\b(aprir|chiuder|salvar|modificar|visualizzar|selezionar|configurar|mostrar)(?:lo|la|li|le)\b",
         r"\1e", question.casefold(),
     )
     tokens = set(FTS_TOKEN_RE.findall(normalized)) - FTS_STOPWORDS
@@ -78,7 +78,7 @@ def _needs_clarification(question: str) -> bool:
         "dove", "devo", "cliccare", "clicco", "aprire", "apro", "lo", "la", "farlo",
         "stato", "cambio", "cambiare", "modifico", "modificare", "attivo", "attivare",
         "disattivo", "è", "aggiorno", "aggiornare", "salvo", "salvare", "configuro",
-        "configurare", "creo", "creare", "chiudere", "visualizzare", "selezionare", "vado",
+        "configurare", "creo", "creare", "chiudere", "visualizzare", "selezionare", "vado", "andare", "mostrare",
     }
     return not (tokens - generic)
 
@@ -506,6 +506,71 @@ def _focused_section(content: str, question: str) -> str | None:
 
 
 SECTION_HEADING = re.compile(r"(?m)^\s*(\d+(?:\.\d+)+[ \t]+[^\n.!?]+)\s*$")
+
+
+def _workflow_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
+    """Confronta lo stato già raggiunto con l'azione documentata nella fonte."""
+    flags = re.IGNORECASE
+    completed = re.search(r"\b(?:ho già|dopo aver)\s+(\w+)\s+([^.!?]+)[.!]", question, flags)
+    activation = bool(completed and re.match(r"associ", completed[1], flags)
+                      and re.search(r"\b(?:attiv\w*|render\w* attiv\w*)\b",
+                                    question[completed.end():], flags))
+    sequence = (re.search(r"\b(?:quando|in quale momento|in che momento)\b", question, flags)
+                and re.search(r"\b(?:salvataggio|salvare)\b", question, flags))
+    permissions = (re.search(r"\bchi\b", question, flags)
+                   and re.search(r"\b(?:vede|vedere|visualizz\w*)\b", question, flags))
+    location = (re.search(r"\b(?:dove|in quale scheda)\b", question, flags)
+                and re.search(r"\b(?:aggiuntiv\w*|supplementar\w*)\b", question, flags))
+    if not any((activation, sequence, permissions, location)):
+        return None
+    query = roots(re.sub(r"check\s*list", "checklist", question, flags=flags))
+    candidates = {}
+
+    def remember(hit: SearchHit, lines: list[str], score: int) -> None:
+        candidates[(hit.document_id, hit.page, tuple(lines))] = (score, hit, lines)
+
+    if activation:
+        assert completed is not None
+        subject = roots(completed[2])
+        for passage in passages_from_hits(hits):
+            if passage.kind != "steps" or len({hit.chunk_id for hit, _ in passage.parts}) != 1:
+                continue
+            lines = [line for _, line in passage.parts]
+            if not (re.match(r"Una volta associat", lines[0], flags)
+                    and re.search(r"\battivar\w*\b", lines[0], flags)
+                    and re.search(r"\battiva\b", lines[-1], flags)):
+                continue
+            overlap = subject & roots(lines[0])
+            if overlap:
+                remember(passage.parts[0][0], lines, len(overlap))
+    else:
+        for hit in hits:
+            context = roots(hit.content)
+            for line in _source_sentences(hit.content):
+                cleaned = re.sub(r"^\d+\s+", "", line)
+                terms = roots(re.sub(r"check\s*list", "checklist", cleaned, flags=flags))
+                overlap = query & terms
+                if (sequence and re.match(r"Dopo il salvataggio\b", cleaned, flags)
+                        and len(overlap - roots("dopo salvataggio posso momento")) >= 2):
+                    remember(hit, [cleaned], len(overlap))
+                elif (permissions and re.search(r"\b(?:solo|soltanto)\b", cleaned, flags)
+                      and re.search(r"\b(?:capability|permess\w*|abilitat\w*)\b", cleaned, flags)
+                      and re.search(r"\b(?:vedr\w*|vedere|visibil\w*)\b", cleaned, flags)
+                      and len(overlap) >= 2):
+                    remember(hit, [cleaned], len(overlap))
+                elif (location and re.search(r"\b(?:scheda|tab)\b.*(?:aggiuntiv|supplementar)",
+                                             cleaned, flags)
+                      and (context & query) - roots(
+                          "dove schermata impostazioni supplementari aggiuntive configurazione"
+                      )):
+                    anchor = re.search(r"Cliccando sul tab\b", cleaned, flags)
+                    remember(hit, [cleaned[anchor.start():] if anchor else cleaned],
+                             len(overlap) + len(context & query))
+    ranked = sorted(candidates.values(), key=lambda entry: entry[0], reverse=True)
+    if not ranked or (len(ranked) > 1 and ranked[0][0] == ranked[1][0]):
+        return None
+    _, hit, lines = ranked[0]
+    return Answer("\n".join(f"{line} [S1]" for line in lines), [hit])
 
 
 def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
@@ -1167,7 +1232,8 @@ class AnswerService:
         )
         if semantic:
             indexed = self.retriever.store.all_hits(document_id)
-            focused_operation = _focused_operation(question, indexed)
+            focused_operation = (_focused_operation(question, indexed)
+                                 or _workflow_evidence(question, indexed))
             if focused_operation is not None:
                 return focused_operation
             structured = self._structured_answer(question, hits, document_id)
