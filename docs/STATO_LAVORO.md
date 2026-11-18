@@ -31,9 +31,28 @@ Lint e **103 test** superati. Report locali in
 `data/evaluations/collaudo-lo3zfC/`, `data/evaluations/collaudo-j70Jsq/` e
 `data/evaluations/collaudo-5XJF43/`. Nessun cambiamento ai manuali o all'indice.
 
-Prossimo passo: rivedere il nuovo report per testo e immagini. Poi
-verificare la generalizzazione con formulazioni alternative oppure
-importare Timeline per collaudare la distinzione tra manuali affini.
+L'utente ha verificato testo e immagini del report da 10/10 e li ha approvati.
+
+### Formulazioni alternative
+
+Suite privata separata `data/evaluations/tre-manuali-parafrasi-2026-11-18.json`:
+stessi dieci intenti, stessi criteri di contenuto, fonti e immagini; cambiano
+solo formulazione e identificativi. Sul commit `e5802e0`, con rete esterna
+bloccata: **3/10** in circa 57 s (originali **10/10**). Report locale
+`data/evaluations/collaudo-FTBeBo/report.html`. Codice, indice e suite
+originale invariati.
+
+Tutte e otto le domande con fonte attesa scelgono il manuale corretto.
+Tre risposte citano pagine diverse da quelle previste (allegati, Slot,
+indicatore di unità locale); le altre tre non superate, tra le domande
+con fonte, mancano la conferma della stampa, la sezione Fornitori o le
+due schede delle unità. «Dove vado per configurarlo?» riceve invece una
+procedura senza che sia stato identificato l'oggetto.
+
+Prossimo passo: riconoscere l'intento e i riferimenti senza antecedente con
+meno dipendenza dalla formulazione esatta. Ripetere in coppia le due suite
+da dieci senza modificare i criteri, insieme alle regressioni precedenti.
+In alternativa, riesaminare prima il report con l'utente.
 
 ## Domande inedite Drug Therapy — 18 novembre 2026
 
