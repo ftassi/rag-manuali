@@ -150,6 +150,9 @@ def _connected_reply(text: str, position: int) -> str:
 
 def _source_sentences(excerpt: str) -> list[str]:
     sentences = []
+    excerpt = re.sub(
+        r"(?im)^[ \t]*(?:Confidential\s+Record name:|Template name:).*", "", excerpt
+    )
     # Mantiene separati i controlli descritti su righe numerate di una tabella PDF.
     excerpt = re.sub(r"\n\s*(\d{1,2})\s+(?=[A-ZÀ-Ý])", r"\n\n\1 ", excerpt)
     for block in excerpt.split("\n\n"):
@@ -499,6 +502,79 @@ def _focused_section(content: str, question: str) -> str | None:
 
 
 SECTION_HEADING = re.compile(r"(?m)^\s*(\d+(?:\.\d+)+[ \t]+[^\n.!?]+)\s*$")
+
+
+def _operation_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
+    """Cerca istruzioni operative e conserva il titolo sulle continuazioni."""
+    flags = re.IGNORECASE
+    identify = re.search(r"\bicona\b.*(?:rinomin|modific).*elimin", question, flags)
+    title = re.search(r"\bnome\b.*\bconferm\w*\b", question, flags)
+    relation = re.search(r"\b(?:colleg|abbin|associ)\w*\b", question, flags)
+    if not (identify or title or relation):
+        return None
+    query = roots(question)
+    aliases = {"model": "template", "pront": "formu"}
+    query |= {alias for word, alias in aliases.items() if word in query}
+    pages = sorted((h for h in hits if h.page is not None),
+                   key=lambda h: (h.document_id, h.page, h.chunk_id))
+    previous = None
+    heading = ""
+    candidates = {}
+    for hit in pages:
+        if previous is None or hit.document_id != previous.document_id or not (
+            previous.page <= hit.page <= previous.page + 1
+        ):
+            heading = ""
+        blocks = SECTION_HEADING.split(hit.content)
+        sections = [(heading, blocks[0]), *zip(blocks[1::2], blocks[2::2], strict=True)]
+        if len(blocks) > 1:
+            heading = blocks[-2]
+        previous = hit
+        for section, body in sections:
+            lines = _source_sentences(body)
+            context = roots(section)
+            evidence = []
+            if identify:
+                evidence = [line for line in lines if re.search(
+                    r"matita.*modific|cestino.*elimin", line, flags
+                )]
+                if not all(any(word in line.casefold() for line in evidence)
+                           for word in ("matita", "cestino")):
+                    continue
+            elif title:
+                if not query & context:
+                    continue
+                evidence = [line for line in lines if re.search(
+                    r"nome.*(?:premere|premi).*invio", line, flags
+                )]
+                if re.search(r"nuov[oa]|creazion", section, flags) and "categ" in query:
+                    if "categ" not in context:
+                        continue
+                    evidence = [line for line in lines if re.search(
+                        r"selezion|clicc|nome.*invio", line, flags
+                    )]
+            elif re.search(r"associazione", section, flags):
+                targets = query & context
+                if len(targets) < 2:
+                    continue
+                evidence = [line for line in lines if re.search(
+                    r"\b(?:tab|scheda|selezionare|salva)\b", line, flags
+                )]
+                if not any(re.search(r"\b(?:tab|scheda)\b", line, flags)
+                           and query & roots(line) for line in evidence):
+                    continue
+            matched = (query & (context | roots(" ".join(evidence)))) - roots(
+                "come devo posso nome confermo quale icona uso per modificare eliminare"
+            )
+            if evidence and matched:
+                candidates[(hit.document_id, hit.page, tuple(evidence))] = (
+                    len(query & context), len(matched), hit, evidence
+                )
+    ranked = sorted(candidates.values(), key=lambda item: item[:2], reverse=True)
+    if not ranked or (len(ranked) > 1 and ranked[0][:2] == ranked[1][:2]):
+        return None
+    _, _, hit, evidence = ranked[0]
+    return Answer("\n".join(f"{line} [S1]" for line in evidence), [hit])
 
 
 def _creation_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
@@ -964,7 +1040,9 @@ class AnswerService:
             if structured is not None:
                 return structured
             indexed = self.retriever.store.all_hits(document_id)
-            section = _section_evidence(question, indexed) or _creation_evidence(question, indexed)
+            section = (_section_evidence(question, indexed)
+                       or _creation_evidence(question, indexed)
+                       or _operation_evidence(question, indexed))
             if section is not None:
                 return section
         if semantic:
