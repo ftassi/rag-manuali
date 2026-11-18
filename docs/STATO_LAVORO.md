@@ -49,10 +49,19 @@ con fonte, mancano la conferma della stampa, la sezione Fornitori o le
 due schede delle unità. «Dove vado per configurarlo?» riceve invece una
 procedura senza che sia stato identificato l'oggetto.
 
-Prossimo passo: riconoscere l'intento e i riferimenti senza antecedente con
-meno dipendenza dalla formulazione esatta. Ripetere in coppia le due suite
-da dieci senza modificare i criteri, insieme alle regressioni precedenti.
-In alternativa, riesaminare prima il report con l'utente.
+Sul codice `5961cd4`, il recupero riconosce varianti di termini e
+dell'ordine nella frase (campi, opzioni, simboli, schede, associazioni e
+posizione dopo il salvataggio). L'oggetto da associare resta distinto dal
+contesto e dai qualificatori; «configurarlo» senza oggetto chiede chiarimento.
+Con criteri invariati e rete esterna bloccata sul Raspberry: **10/10
+parafrasi** (prima 3/10), **10/10 originali**, **9/9** Drug Therapy inedita
+e **16/16** estesa. Lint e **103 test** superati. Report locali rispettivi:
+`collaudo-rfRK86`, `collaudo-5HM6zQ`, `collaudo-AF3bOJ` e
+`collaudo-O56z7t` sotto `data/evaluations/`. Indice invariato.
+
+Prossimo passo: rivedere il report delle parafrasi. Poi collaudare Timeline
+come quarto manuale, oppure provare una nuova suite indipendente per misurare
+quanto il recupero generalizza oltre le formulazioni già collaudate.
 
 ## Domande inedite Drug Therapy — 18 novembre 2026
 
