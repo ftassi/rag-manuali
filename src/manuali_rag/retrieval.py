@@ -523,7 +523,11 @@ def _workflow_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                 and re.search(r"\b(?:aggiuntiv\w*|supplementar\w*)\b", question, flags))
     if not any((activation, sequence, permissions, location)):
         return None
-    query = roots(re.sub(r"check\s*list", "checklist", question, flags=flags))
+    def terms_for(value: str) -> set[str]:
+        value = re.sub(r"check\s*list", "checklist", value, flags=flags)
+        return roots(re.sub(r"\borari[ae]\b", "orario", value, flags=flags))
+
+    query = terms_for(question)
     candidates = {}
 
     def remember(hit: SearchHit, lines: list[str], score: int) -> None:
@@ -545,10 +549,10 @@ def _workflow_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                 remember(passage.parts[0][0], lines, len(overlap))
     else:
         for hit in hits:
-            context = roots(hit.content)
+            context = terms_for(hit.content)
             for line in _source_sentences(hit.content):
                 cleaned = re.sub(r"^\d+\s+", "", line)
-                terms = roots(re.sub(r"check\s*list", "checklist", cleaned, flags=flags))
+                terms = terms_for(cleaned)
                 overlap = query & terms
                 after_save = (sequence and re.match(r"Dopo il salvataggio\b", cleaned, flags)
                         and len(overlap - roots("dopo salvataggio posso momento")) >= 2)
@@ -557,7 +561,11 @@ def _workflow_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                       and re.search(r"\b(?:vedr\w*|vedere|visibil\w*)\b", cleaned, flags)
                       and len(overlap) >= 2)
                 if after_save or can_see:
-                    remember(hit, [cleaned], len(overlap))
+                    if can_see:
+                        anchor = re.search(r"\b(?:solo|soltanto)\b", cleaned, flags)
+                        if anchor:
+                            cleaned = cleaned[anchor.start():]
+                    remember(hit, [cleaned], 3 * len(overlap) + len(query & context))
                 elif (location and re.search(r"\b(?:scheda|tab)\b.*(?:aggiuntiv|supplementar)",
                                              cleaned, flags)
                       and (context & query) - roots(
