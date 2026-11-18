@@ -508,6 +508,81 @@ def _focused_section(content: str, question: str) -> str | None:
 SECTION_HEADING = re.compile(r"(?m)^\s*(\d+(?:\.\d+)+[ \t]+[^\n.!?]+)\s*$")
 
 
+def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
+    """Usa evidenza diretta per richieste con un controllo o un risultato preciso."""
+    flags = re.IGNORECASE
+    field = re.search(r"\bquale campo\b.*\b(?:quanto tempo|durata)\b", question, flags)
+    link = re.search(r"\bdove\s+(?:collego|associo|abbino)\s+(.+?)(?=\s+che\b|[?]|$)",
+                     question, flags)
+    control = re.search(r"\bquale voce\b.*\bcome confermo\b", question, flags)
+    icon = re.search(r"\bquando compare l['’]icona\s+(.+?)\s+(?:accanto|e che)\b",
+                     question, flags)
+    position = re.search(r"\bdopo aver salvato\s+(.+?),\s+dove compare\b", question, flags)
+    tabs = re.search(r"\b(?:quali|quali sono)\b.*\bdue schede\b.*\bschermata\s+(.+?)(?:\s+nel |[?]|$)",
+                     question, flags)
+    if not any((field, link, control, icon, position, tabs)):
+        return None
+    candidates = {}
+    if field or link:
+        query = roots(question)
+        for passage in passages_from_hits(hits):
+            context = roots(passage.path)
+            if field and passage.kind == "field" and re.search(r"\bdurata\b", passage.text, flags):
+                match = query & context
+            elif link and passage.kind == "prose" and re.match(r"Nella sezione\b", passage.text, flags):
+                target = roots(link[1])
+                # L'oggetto da collegare deve essere presente dopo il nome della sezione.
+                match = query & roots(passage.chapter)
+                if not target or not target <= roots(passage.text.split(",", 1)[-1]):
+                    continue
+            else:
+                continue
+            if match and len(passage.parts) == 1:
+                hit, line = passage.parts[0]
+                candidates[(hit.document_id, hit.page, line)] = (len(match), hit, [line])
+    else:
+        query = roots(question)
+        for hit in hits:
+            lines = _source_sentences(hit.content)
+            for index, line in enumerate(lines):
+                evidence = []
+                if control and re.search(r"\b(?:clicc\w*|prem\w*)\b", line, flags):
+                    match = query & roots(line)
+                    if len(match) < 3:
+                        continue
+                    closing = next((item for item in lines[index + 1:index + 5]
+                                    if re.search(r"\b(?:salva|conferma)\b", item, flags)), None)
+                    if closing is not None and query & roots(closing):
+                        evidence = [line, closing]
+                elif icon and roots(icon[1]) <= roots(line) and re.search(r"\bvisibil", line, flags):
+                    match = roots(icon[1])
+                    following = lines[index + 1:index + 2]
+                    if following and re.match(r"Consente di\b", following[0], flags):
+                        evidence = [line, following[0]]
+                elif position and re.search(r"\b(?:salva|salvataggio)\b", line, flags):
+                    match = roots(position[1]) & roots(line)
+                    if len(match) >= 2 and re.search(r"\b(?:lista|elenco)\b", line, flags):
+                        start = re.search(r"\b(?:cliccando|premendo)\b", line, flags)
+                        evidence = [line[start.start():] if start else line]
+                elif tabs and re.search(r"\bdue (?:tab|schede)\b", line, flags):
+                    following = lines[index + 1:index + 3]
+                    match = roots(tabs[1]) & roots(" ".join(following))
+                    if len(following) == 2 and all(item.startswith(("➢", "•", "◼"))
+                                                   for item in following):
+                        evidence = [line, *following]
+                else:
+                    continue
+                if match and evidence:
+                    candidates[(hit.document_id, hit.page, tuple(evidence))] = (
+                        len(match), hit, evidence
+                    )
+    ranked = sorted(candidates.values(), key=lambda item: item[0], reverse=True)
+    if not ranked or (len(ranked) > 1 and ranked[0][0] == ranked[1][0]):
+        return None
+    _, hit, evidence = ranked[0]
+    return Answer("\n".join(f"{line} [S1]" for line in evidence), [hit])
+
+
 def _operation_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
     """Cerca istruzioni operative e conserva il titolo sulle continuazioni."""
     flags = re.IGNORECASE
@@ -1062,10 +1137,13 @@ class AnswerService:
             document_id=document_id,
         )
         if semantic:
+            indexed = self.retriever.store.all_hits(document_id)
+            focused_operation = _focused_operation(question, indexed)
+            if focused_operation is not None:
+                return focused_operation
             structured = self._structured_answer(question, hits, document_id)
             if structured is not None:
                 return structured
-            indexed = self.retriever.store.all_hits(document_id)
             section = (_section_evidence(question, indexed)
                        or _creation_evidence(question, indexed)
                        or _operation_evidence(question, indexed))
