@@ -809,3 +809,20 @@ def test_creation_evidence_only_follows_the_same_document_to_confirmation():
     assert 'INTESTAZIONE' not in answer.text and 'Eliminare' not in answer.text
     following.document_id = 'other'
     assert _creation_evidence(question, [opening, following]) is None
+
+
+def test_object_pronoun_without_antecedent_needs_clarification():
+    assert _needs_clarification("Dove clicco per aprirlo?")
+    assert not _needs_clarification("Ho una scheda in coda: dove clicco per aprirla?")
+
+
+def test_procedural_credential_help_requires_same_source_and_login_action():
+    from manuali_rag.retrieval import _credential_entry_steps
+
+    steps = [(1, "Inserire Nome Utente e Password negli appositi spazi."),
+             (1, "Fare click su Accedi.")]
+    assert _credential_entry_steps("Come accedo con le mie credenziali?", steps) == [1, 2]
+    assert _credential_entry_steps("Quali sono le mie credenziali?", steps) is None
+    assert _credential_entry_steps(
+        "Come accedo con le mie credenziali?", [steps[0], (2, steps[1][1])]
+    ) is None

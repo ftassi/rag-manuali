@@ -69,12 +69,16 @@ def _complete_filter_steps(
 
 def _needs_clarification(question: str) -> bool:
     # Verbi senza oggetto e pronomi non identificano una procedura; non inventare il contesto.
-    tokens = set(FTS_TOKEN_RE.findall(question.casefold())) - FTS_STOPWORDS
+    normalized = re.sub(
+        r"\b(aprir|chiuder|salvar|modificar|visualizzar|selezionar)(?:lo|la|li|le)\b",
+        r"\1e", question.casefold(),
+    )
+    tokens = set(FTS_TOKEN_RE.findall(normalized)) - FTS_STOPWORDS
     generic = {
         "dove", "devo", "cliccare", "clicco", "aprire", "apro", "lo", "la", "farlo",
         "stato", "cambio", "cambiare", "modifico", "modificare", "attivo", "attivare",
         "disattivo", "è", "aggiorno", "aggiornare", "salvo", "salvare", "configuro",
-        "configurare", "creo", "creare",
+        "configurare", "creo", "creare", "chiudere", "visualizzare", "selezionare",
     }
     return not (tokens - generic)
 
@@ -714,11 +718,36 @@ def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
     return Answer("\n".join(f"{line} [S1]" for line in evidence), [hit])
 
 
+def _credential_entry_steps(question: str, excerpts: list[tuple[int, str]]) -> list[int] | None:
+    """Distingue la procedura di accesso dalla richiesta di un valore segreto."""
+    if not re.search(r"\bcome\s+(?:(?:posso|devo)\s+)?(?:acced\w*|entro|entrare)\b",
+                     question, re.IGNORECASE):
+        return None
+    if not re.search(r"\bcredenzial\w*\b", question, re.IGNORECASE):
+        return None
+    for index, (source, line) in enumerate(excerpts):
+        if not re.match(r"(?:inserire|inserisci|digitare)\s+nome utente e password\b",
+                        line, re.IGNORECASE):
+            continue
+        if index + 1 >= len(excerpts):
+            continue
+        next_source, control = excerpts[index + 1]
+        if source == next_source and re.search(
+            r"\b(?:click|clicc\w*|premere)\s+(?:su\s+)?[“\"«]?accedi\b",
+            control, re.IGNORECASE,
+        ):
+            return [index + 1, index + 2]
+    return None
+
+
 def _procedure_selection(
     question: str, hits: list[SearchHit], excerpts: list[tuple[int, str]]
 ) -> list[int] | None:
     if not re.search(r"\bcome\b", question, re.IGNORECASE):
         return None
+    credential_steps = _credential_entry_steps(question, excerpts)
+    if credential_steps is not None:
+        return credential_steps
     for source, hit in enumerate(hits, start=1):
         # Un'operazione di correzione non è una semplice consultazione del dettaglio.
         if re.search(r"corregg|corregger|modific", question, re.IGNORECASE) and not re.search(
