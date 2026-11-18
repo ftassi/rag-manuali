@@ -516,7 +516,8 @@ def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
         and re.search(r"\b(?:quanto tempo|durata|minut[io])\b", question, flags)
     )
     link = re.search(
-        r"\b(?:dove|in quale sezione)\s+(?:si\s+)?(?:colleg|associ|abbin)\w*\s+"
+        r"\b(?:dove|in quale sezione(?:\s+d(?:el|ella)\s+\w+)?)\s+"
+        r"(?:si\s+)?(?:colleg|associ|abbin)\w*\s+"
         r"(.+?)(?=\s+(?:che|alle?|ai|agli)\b|[?]|$)", question, flags,
     )
     control = (
