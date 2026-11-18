@@ -22,9 +22,18 @@ dopo il salvataggio (pagina precedente citata) ed elenco delle due schede.
 Nel sesto caso il campo Slot e la durata sono corretti, ma il report
 boccia l'aggiunta della pagina 1 e di altri campi non richiesti.
 
-Prossimo passo: dare priorità alle risposte focalizzate sui singoli campi
-e completare i passaggi o gli elenchi documentati; ripetere i dieci casi
-senza cambiare i criteri e verificare le suite precedenti.
+Sul codice `a0641c9`, il recupero mirato seleziona il singolo campo
+richiesto; distingue l'oggetto da associare da un riferimento incidentale;
+completa istruzioni e liste con i passaggi vicini della stessa fonte.
+Sul Raspberry, con rete esterna bloccata e criteri invariati: **10/10**
+(prima 4/10), **9/9** Drug Therapy inedita e **16/16** regressione estesa.
+Lint e **103 test** superati. Report locali in
+`data/evaluations/collaudo-lo3zfC/`, `data/evaluations/collaudo-j70Jsq/` e
+`data/evaluations/collaudo-5XJF43/`. Nessun cambiamento ai manuali o all'indice.
+
+Prossimo passo: rivedere il nuovo report per testo e immagini. Poi
+verificare la generalizzazione con formulazioni alternative oppure
+importare Timeline per collaudare la distinzione tra manuali affini.
 
 ## Domande inedite Drug Therapy — 18 novembre 2026
 
