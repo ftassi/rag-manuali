@@ -6,6 +6,28 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Nuova serie indipendente — 18 novembre 2026
+
+Suite privata `data/evaluations/tre-manuali-inedite-c-2026-11-18.json`:
+otto domande non presenti nelle suite precedenti, con criteri fissati prima
+del giro. Sul commit `c7d04ac`, con rete esterna bloccata: **3/8** in
+circa 56 s (QARA 2/3, AGENDE 0/2, Drug Therapy 1/2, chiarimenti 0/1).
+Report locale `data/evaluations/collaudo-f4pcLe/report.html`. Codice,
+indice e suite precedenti invariati; nessun report rimosso.
+
+Passano apertura dell'attività EMR, documento sostitutivo dopo la modifica
+della checklist e posizione dell'icona di rischio. Restano da migliorare:
+scelta di QARA per i permessi della checklist (rinvio errato a Drug Therapy),
+sequenza dopo il salvataggio della validità dell'agenda, distinzione tra
+associazione e attivazione, scelta della scheda Info Aggiuntive e richiesta
+di chiarimento quando «mostrarlo» non ha un antecedente. In sei delle
+sette domande con fonte attesa il manuale scelto è corretto.
+
+Prossimo passo: migliorare il recupero dei soggetti e dello stato già
+raggiunto, senza affidarsi a singole parole; estendere la gestione dei
+riferimenti senza antecedente. Poi ripetere gli otto casi e le regressioni
+con i criteri invariati.
+
 ## Nuova suite trasversale — 18 novembre 2026
 
 Suite privata `data/evaluations/tre-manuali-inedite-b-2026-11-18.json`,
