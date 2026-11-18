@@ -1,10 +1,30 @@
-# Punto di ripresa — 17 novembre 2026
+# Punto di ripresa — 18 novembre 2026
 
 ## Obiettivo finale
 
 Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte nel
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
+
+## Domande inedite Drug Therapy — 18 novembre 2026
+
+Suite privata separata `data/evaluations/drug-therapy-inedite-2026-11-18.json`.
+Nove casi senza selettore, con criteri definiti prima del giro. Codice e
+suite storica da 16 casi invariati. Sul commit `17c4808`, con rete esterna
+bloccata dalla slice, **2/9** in circa 94 s: passano il caso sui dizionari
+e una delle due domande ambigue. Report locale `data/evaluations/collaudo-PXeST9/`.
+
+Cinque richieste Drug Therapy scelgono il manuale corretto ma pagine errate:
+conferma del nome della radice, icone per rinomina/eliminazione, creazione
+categoria e associazioni del prontuario a reparto o modello. Una risposta
+cita il piè di pagina. Il controllo di accesso utente C4C si astiene quando
+dovrebbe rispondere; una domanda con il solo pronome riceve invece una
+procedura QARA fuori contesto.
+
+Prossimo intervento consigliato: seguire le sottosezioni operative anche
+quando proseguono sulla pagina seguente e scartare intestazioni e piè di
+pagina. Verificare separatamente il login e i riferimenti senza antecedente,
+poi ripetere la suite inedita e quella da 16 casi con gli stessi criteri.
 
 ## Terzo manuale: configurazione Drug Therapy — 17 novembre 2026
 
