@@ -23,10 +23,19 @@ associazione e attivazione, scelta della scheda Info Aggiuntive e richiesta
 di chiarimento quando «mostrarlo» non ha un antecedente. In sei delle
 sette domande con fonte attesa il manuale scelto è corretto.
 
-Prossimo passo: migliorare il recupero dei soggetti e dello stato già
-raggiunto, senza affidarsi a singole parole; estendere la gestione dei
-riferimenti senza antecedente. Poi ripetere gli otto casi e le regressioni
-con i criteri invariati.
+Sul codice `911e5bc`, il recupero distingue lo stato già raggiunto dal
+comando richiesto. Per i permessi dà più peso all'oggetto e all'azione
+citati nel passaggio che al contesto della pagina; per i riferimenti come
+«mostrarlo» senza oggetto chiede un chiarimento. Criteri e indice invariati.
+Sul Raspberry con rete esterna bloccata: **8/8** (prima 3/8), **10/10**
+parafrasi, **10/10** originali, **9/9** Drug Therapy e **16/16** estesa.
+`make check`: lint e **103 test** superati. Report locali rispettivi
+`collaudo-X4tE5H`, `collaudo-IjmsmV`, `collaudo-RqjWrI`,
+`collaudo-y6mAkb`, `collaudo-9BSia8` sotto `data/evaluations/`.
+
+Prossimo passo: rivedere testo e immagini del report da 8 casi. Poi
+consigliato collaudare Timeline, oppure eseguire una nuova suite davvero
+indipendente senza modificare prima il codice.
 
 ## Nuova suite trasversale — 18 novembre 2026
 
