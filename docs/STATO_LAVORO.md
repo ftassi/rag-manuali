@@ -29,9 +29,18 @@ e criteri invariati: **7/9** nella suite inedita (**6/6** Drug Therapy)
 e **16/16** nella suite storica. Report locali:
 `data/evaluations/collaudo-oKXQbj/` e `data/evaluations/collaudo-9JN7Hb/`.
 
-Prossimo passo: correggere il rifiuto sul login utente C4C e chiedere
-chiarimenti quando manca l'oggetto dell'azione (es. «Dove clicco per
-aprirlo?»). Ripetere le due suite senza cambiare i criteri.
+Sul codice `1f609b9`, l'accesso con credenziali usa i passi documentati
+sulla stessa fonte, prima del filtro sulle richieste personali. Le richieste
+del valore di una credenziale restano distinte. Le domande senza oggetto,
+anche con pronome unito al verbo, chiedono un chiarimento.
+Sul Raspberry: lint e **103 test**, suite inedita **9/9** e regressione
+**16/16**, con criteri invariati e rete esterna bloccata. Report locali:
+`data/evaluations/collaudo-FB6m3x/` e `data/evaluations/collaudo-EioVWK/`.
+
+Prossimo passo: rivedere il report inedito per confermare testo e immagini.
+Dopo la conferma, collaudare Timeline come quarto manuale per verificare
+la distinzione tra i due manuali Drug Therapy, oppure ampliare le
+formulazioni indipendenti senza cambiare il corpus.
 
 ## Terzo manuale: configurazione Drug Therapy — 17 novembre 2026
 
