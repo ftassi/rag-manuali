@@ -6,6 +6,27 @@ Usare il RAG direttamente dal Raspberry, scrivendo domande e leggendo risposte n
 browser locale anche senza Internet. Manuali, indice e modelli devono restare locali.
 Il promemoria operativo aggiornabile è [GUIDA_USO.md](GUIDA_USO.md).
 
+## Quarto manuale: configurazione Timeline
+
+L'utente ha verificato testo e immagini del report precedente da 8 casi e
+ha richiesto il collaudo di Timeline. Importato solo il manuale di
+configurazione Timeline 6.5.0 sul Raspberry, con backup SQLite preliminare
+in `data/backups/`. Il PDF ha 67 pagine e 74 frammenti, senza avvisi.
+L'indice ora contiene 5 documenti (4 PDF e il Markdown sintetico), 429 frammenti.
+
+Sul commit `237d94c`, con rete esterna bloccata e ricerca non limitata
+a un manuale: **10/11** nella suite privata `timeline-primo-collaudo.json`.
+Passano **6/7 Timeline** e **4/4 controlli**, tra cui due casi Terapia,
+la domanda composta QARA + AGENDE e un chiarimento. Il caso sull'accesso
+alla configurazione cita Timeline ma indica la sottovoce Presentation
+Concepts (pagina 41) anziché l'ingresso Patient Timeline (pagina 9).
+Report locale `data/evaluations/collaudo-iDK6os/report.html`.
+Nessuna modifica al codice o alle suite precedenti; nessun report rimosso.
+
+Prossimo passo: distinguere meglio la voce d'ingresso da una sottovoce
+del suo menu; ripetere gli 11 casi e le regressioni sull'indice ampliato.
+In alternativa, ampliare prima le domande Timeline su sezioni diverse.
+
 ## Nuova serie indipendente — 18 novembre 2026
 
 Suite privata `data/evaluations/tre-manuali-inedite-c-2026-11-18.json`:
