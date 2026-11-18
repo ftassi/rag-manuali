@@ -565,7 +565,10 @@ def _workflow_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
                         anchor = re.search(r"\b(?:solo|soltanto)\b", cleaned, flags)
                         if anchor:
                             cleaned = cleaned[anchor.start():]
-                    remember(hit, [cleaned], 3 * len(overlap) + len(query & context))
+                    # I termini del passaggio citato contano più del contesto della pagina.
+                    direct_match = query & terms_for(cleaned)
+                    remember(hit, [cleaned], (len(query) + 1) * len(direct_match)
+                             + len(query & context))
                 elif (location and re.search(r"\b(?:scheda|tab)\b.*(?:aggiuntiv|supplementar)",
                                              cleaned, flags)
                       and (context & query) - roots(
