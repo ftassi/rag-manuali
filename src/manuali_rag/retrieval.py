@@ -745,9 +745,6 @@ def _procedure_selection(
 ) -> list[int] | None:
     if not re.search(r"\bcome\b", question, re.IGNORECASE):
         return None
-    credential_steps = _credential_entry_steps(question, excerpts)
-    if credential_steps is not None:
-        return credential_steps
     for source, hit in enumerate(hits, start=1):
         # Un'operazione di correzione non è una semplice consultazione del dettaglio.
         if re.search(r"corregg|corregger|modific", question, re.IGNORECASE) and not re.search(
@@ -1251,10 +1248,12 @@ class AnswerService:
                     }}, "required": ["quotes"], "additionalProperties": False,
                 },
             })
-        selected = direct if _personal_scope(question) else None
+        credential_steps = _credential_entry_steps(question, excerpts)
+        personal = _personal_scope(question) and credential_steps is None
+        selected = direct if personal else credential_steps
         if selected is None:
             selected = _procedure_selection(question, hits, excerpts)
-        procedure_selected = selected is not None and not _personal_scope(question)
+        procedure_selected = selected is not None and not personal
         if selected is None and re.search(
             r"serve|acced|access|visualizz|vedere|vedo|trovo|trovare|aprire|apro|ottenere",
             question, re.IGNORECASE,
