@@ -547,7 +547,7 @@ def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
             if field and passage.kind == "field" and re.search(r"\bdurata\b", passage.text, flags):
                 match = query & context
             elif link and passage.kind == "prose" and re.match(r"Nella sezione\b", passage.text, flags):
-                target = roots(link[1])
+                target = roots(link[1]) - roots("disponibile disponibili")
                 # L'oggetto da collegare deve essere presente dopo il nome della sezione.
                 match = query & roots(passage.chapter)
                 if not target or not target <= roots(passage.text.split(",", 1)[-1]):
@@ -561,7 +561,7 @@ def _focused_operation(question: str, hits: list[SearchHit]) -> Answer | None:
                     # Premia l'oggetto esplicito della relazione rispetto a una
                     # menzione incidentale (per esempio un complemento singolare).
                     target_words = FTS_TOKEN_RE.findall(link[1].casefold())
-                    significant = [word for word in target_words if roots(word)]
+                    significant = [word for word in target_words if roots(word) & target]
                     if significant and re.search(
                         r"\b" + r"\s+".join(map(re.escape, significant)) + r"\b",
                         line, flags,
