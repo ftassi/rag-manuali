@@ -823,12 +823,18 @@ def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
     """Preferisce una sezione che documenta insieme il soggetto e l'azione richiesta."""
     flags = re.IGNORECASE
     menu = re.search(r"quale voce.+\bmenu\b|da quale voce", question, flags)
+    entry = re.search(
+        r"\b(?:voce|opzione)\b[^?]*?\bper (?:entrare|accedere) "
+        r"(?:nella|nella sezione di|alla) configurazione (?:della|del|di) (.+?)[?.]?\s*$",
+        question, flags,
+    )
+    entry_subject = roots(entry[1]) if entry else set()
     hierarchy = re.search(r"gerarchia|struttura ad albero", question, flags)
     placement = re.search(r"dove\s+(?:compare|appar[ei]|viene mostrat\w*)", question, flags)
     address = re.search(r"\b(?:url|indirizzo web|percorso web)\b", question, flags)
     lookup = re.search(r"\b(?:come|dove)\s+(?:posso\s+)?(?:cerco|cercare|ricerco)\b", question, flags)
     read_only = re.search(r"\b(?:sola lettura|modificabil\w*)\b", question, flags)
-    if sum(bool(mode) for mode in (menu, hierarchy, placement, address, lookup, read_only)) != 1:
+    if sum(bool(mode) for mode in (menu or entry, hierarchy, placement, address, lookup, read_only)) != 1:
         return None
     query = roots(question) - roots(
         "quale voce menu apre aprire sezione schermata elenco lista dove compare appare "
@@ -853,7 +859,17 @@ def _section_evidence(question: str, hits: list[SearchHit]) -> Answer | None:
             title = roots(heading)
             sentences = _source_sentences(body)
             for index, line in enumerate(sentences):
-                if menu and re.match(r"Dal\s+men[uù]\b.*\bvoce\b", line, flags):
+                if entry_subject:
+                    # Una sezione citata come contenitore non è la voce da selezionare.
+                    action = re.search(
+                        r"\bper accedere alla configurazione (?:della|del|di) (.+?) "
+                        r'selezionare\s+[“"«]([^”"»]+)[”"»]', line, flags,
+                    )
+                    if not action or not entry_subject <= roots(action[1]):
+                        continue
+                    matched = entry_subject
+                    evidence = [action[0][0].upper() + action[0][1:] + "."]
+                elif menu and re.match(r"Dal\s+men[uù]\b.*\bvoce\b", line, flags):
                     pattern = r"^Dal\s+men[uù]\s+(\w+)"
                     source_menu = re.match(pattern, line, flags)
                     matched = query & (roots(line) | title)

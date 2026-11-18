@@ -826,3 +826,19 @@ def test_procedural_credential_help_requires_same_source_and_login_action():
     assert _credential_entry_steps(
         "Come accedo con le mie credenziali?", [steps[0], (2, steps[1][1])]
     ) is None
+
+
+def test_menu_entry_does_not_select_child_control():
+    from manuali_rag.retrieval import _section_evidence
+
+    entry, child = _hit(1, 0.5), _hit(2, 0.9)
+    entry.content = ('1.1 Accesso alla configurazione\n\n'
+                     'Per accedere alla configurazione del registro selezionare “Registro”.')
+    child.content = ('2.1 Esportazione\n\n'
+                     'Dal menu di sinistra, sotto Registro selezionare la voce “Esporta”.')
+    answer = _section_evidence(
+        'Come si chiama la voce nel menu per entrare nella configurazione del registro?',
+        [child, entry],
+    )
+    assert answer is not None and answer.sources == [entry]
+    assert '“Registro”' in answer.text and 'Esporta' not in answer.text
